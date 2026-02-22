@@ -1,0 +1,6 @@
+opentrader/__pycache__/
+venv/
+market/__pycache__/
+market/migrations/__pycache__/
+db.sqlite3
+frontend/package-lock.json
