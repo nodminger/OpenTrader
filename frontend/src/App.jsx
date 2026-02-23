@@ -191,8 +191,8 @@ function App() {
   const DEFAULT_SMA_LENGTHS = [5, 10, 20, 50, 100, 200, 7, 14, 30, 150];
 
   const addIndicator = (type) => {
-    if (type === 'rsi' && indicators.some(i => i.type === 'rsi')) return;
     if (type === 'macd' && indicators.some(i => i.type === 'macd')) return;
+    if (type === 'volume_profile' && indicators.some(i => i.type === 'volume_profile')) return;
 
     if (type === 'sma') {
       const slots = DEFAULT_SMA_LENGTHS.map((length, i) => ({
@@ -233,6 +233,26 @@ function App() {
         visible: true,
         color: '#2962ff',
         signalColor: '#ff9800',
+      }]);
+    }
+
+    if (type === 'vp') {
+      setIndicators(prev => [...prev, {
+        id: 'vp-main',
+        type: 'vp',
+        priceBins: 40,
+        visible: true,
+        color: 'rgba(38, 166, 154, 0.2)', // Same as green volume but with transparency
+      }]);
+    }
+
+    if (type === 'volume_profile') {
+      setIndicators(prev => [...prev, {
+        id: 'vp-main',
+        type: 'volume_profile',
+        priceBins: 40,
+        visible: true,
+        color: 'rgba(38, 166, 154, 0.4)',
       }]);
     }
   };
@@ -419,6 +439,16 @@ function App() {
             title="Normalized MACD"
             groupType="macd"
             indicators={indicators.filter(i => i.type === 'macd')}
+            updateIndicator={updateIndicator}
+            removeIndicator={removeIndicator}
+            removeIndicatorGroup={removeIndicatorGroup}
+            toggleIndicator={toggleIndicator}
+          />
+          {/* Volume Profile Panel */}
+          <IndicatorPanel
+            title="Volume Profile / HD"
+            groupType="volume_profile"
+            indicators={indicators.filter(i => i.type === 'volume_profile')}
             updateIndicator={updateIndicator}
             removeIndicator={removeIndicator}
             removeIndicatorGroup={removeIndicatorGroup}

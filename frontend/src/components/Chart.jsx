@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
     createChart,
     ColorType,
@@ -9,6 +9,7 @@ import {
 import { computeSMA } from '../Indicators/sma';
 import { computeRSI } from '../Indicators/rsi';
 import { computeMACD } from '../Indicators/macd';
+import { computeVolumeProfile } from '../Indicators/volumeProfile';
 
 // Compute Heikin-Ashi candles from OHLCV data
 function computeHeikinAshi(data) {
@@ -42,6 +43,9 @@ const Chart = ({
     const smaSeriesRef = useRef({});
     const rsiSeriesRef = useRef({});
     const macdSeriesRef = useRef({});
+    const vpRef = useRef(null);
+    const [vpBins, setVpBins] = useState([]);
+
     const isFirstLoad = useRef(true);
     const lastSymbolInterval = useRef(`${symbol}-${interval}`);
     const lastChartType = useRef(chartType);
@@ -51,6 +55,7 @@ const Chart = ({
     useEffect(() => { onRangeChangeRef.current = onVisibleLogicalRangeChange; }, [onVisibleLogicalRangeChange]);
     useEffect(() => { onCrosshairMoveRef.current = onCrosshairMove; }, [onCrosshairMove]);
 
+    // Initialize Chart
     useEffect(() => {
         const chart = createChart(containerRef.current, {
             layout: {
@@ -167,6 +172,37 @@ const Chart = ({
         };
     }, []);
 
+    // Sync VP SVG Overlays
+    useEffect(() => {
+        if (!chartRef.current || !vpRef.current) return;
+        const svg = vpRef.current;
+        while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+        const vpInd = indicators.find(i => i.type === 'volume_profile' && i.visible);
+        if (!vpInd || vpBins.length === 0 || !priceSeriesRef.current) return;
+
+        const pScale = priceSeriesRef.current.priceScale();
+        const width = containerRef.current.clientWidth;
+
+        vpBins.forEach(bin => {
+            const y1 = priceSeriesRef.current.priceToCoordinate(bin.low);
+            const y2 = priceSeriesRef.current.priceToCoordinate(bin.high);
+            if (y1 === null || y2 === null) return;
+
+            const height = Math.abs(y2 - y1);
+            const y = Math.min(y1, y2);
+            const barWidth = (width * 0.3) * bin.normalizedVolume;
+
+            const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+            rect.setAttribute('x', (width - barWidth).toString());
+            rect.setAttribute('y', y.toString());
+            rect.setAttribute('width', barWidth.toString());
+            rect.setAttribute('height', Math.max(1, height - 1).toString());
+            rect.setAttribute('fill', vpInd.color);
+            svg.appendChild(rect);
+        });
+    }, [vpBins, indicators]);
+
     // Reset FirstLoad tracking on Symbol or Interval change
     useEffect(() => {
         const key = `${symbol}-${interval}`;
@@ -184,7 +220,7 @@ const Chart = ({
         const hasMacd = indicators.some(i => i.type === 'macd' && i.visible);
         const oscillatorCount = (hasRsi ? 1 : 0) + (hasMacd ? 1 : 0);
 
-        // Core Layout Definitions
+        // Layout margins
         let priceBottom = 0.08;
         let volTop = 0.82, volBottom = 0;
         let rsiMargins = { top: 0.80, bottom: 0.02 };
@@ -202,10 +238,7 @@ const Chart = ({
             macdMargins = { top: 0.82, bottom: 0.02 };
         }
 
-        // Apply Price & Volume Layout
-        chartRef.current.priceScale('right').applyOptions({
-            scaleMargins: { top: 0.02, bottom: priceBottom },
-        });
+        chartRef.current.priceScale('right').applyOptions({ scaleMargins: { top: 0.02, bottom: priceBottom } });
 
         if (!volumeSeriesRef.current) {
             volumeSeriesRef.current = chartRef.current.addSeries(HistogramSeries, {
@@ -221,7 +254,6 @@ const Chart = ({
             color: d.close >= d.open ? 'rgba(38,166,154,0.5)' : 'rgba(239,83,80,0.5)',
         })));
 
-        // Handle Price Series Type (Candle/Line/Heikin)
         const typeChanged = lastChartType.current !== chartType;
         if (!priceSeriesRef.current || typeChanged) {
             if (priceSeriesRef.current) chartRef.current.removeSeries(priceSeriesRef.current);
@@ -236,137 +268,93 @@ const Chart = ({
             lastChartType.current = chartType;
         }
 
-        const priceData = chartType === 'heikin'
-            ? computeHeikinAshi(data)
-            : (chartType === 'line' ? data.map(d => ({ time: d.time, value: d.close })) : data);
+        const priceData = chartType === 'heikin' ? computeHeikinAshi(data) : (chartType === 'line' ? data.map(d => ({ time: d.time, value: d.close })) : data);
         priceSeriesRef.current.setData(priceData);
 
-        // Indicator Series Management
+        // Indicator Management
         const currentIds = new Set(indicators.map(ind => ind.id));
-
         [smaSeriesRef, rsiSeriesRef, macdSeriesRef].forEach(ref => {
             Object.keys(ref.current).forEach(id => {
-                if (!currentIds.has(id.split('_')[0])) {
+                if (!currentIds.has(id)) {
                     try {
-                        if (Array.isArray(ref.current[id])) {
-                            ref.current[id].forEach(s => chartRef.current.removeSeries(s));
-                        } else {
-                            chartRef.current.removeSeries(ref.current[id]);
-                        }
+                        if (Array.isArray(ref.current[id])) ref.current[id].forEach(s => chartRef.current.removeSeries(s));
+                        else chartRef.current.removeSeries(ref.current[id]);
                     } catch (_) { }
                     delete ref.current[id];
                 }
             });
         });
 
+        let vpActive = false;
         indicators.forEach(ind => {
-            if (ind.type === 'sma') {
+            if (ind.type === 'sma' && ind.visible) {
                 const existing = smaSeriesRef.current[ind.id];
-                if (!ind.visible) {
-                    if (existing) { try { chartRef.current.removeSeries(existing); } catch (_) { } delete smaSeriesRef.current[ind.id]; }
-                    return;
-                }
                 const smaData = computeSMA(data, ind.length, ind.source);
-                if (smaData.length === 0) return;
-                if (existing) {
-                    existing.applyOptions({ color: ind.color });
-                    existing.setData(smaData);
-                } else {
-                    const s = chartRef.current.addSeries(LineSeries, { color: ind.color, lineWidth: 1.5, crosshairMarkerVisible: false, priceLineVisible: false });
-                    s.setData(smaData);
-                    smaSeriesRef.current[ind.id] = s;
-                }
+                if (existing) { existing.applyOptions({ color: ind.color }); existing.setData(smaData); }
+                else { const s = chartRef.current.addSeries(LineSeries, { color: ind.color, lineWidth: 1.5, crosshairMarkerVisible: false }); s.setData(smaData); smaSeriesRef.current[ind.id] = s; }
             }
-
-            if (ind.type === 'rsi') {
+            if (ind.type === 'rsi' && ind.visible) {
                 let existing = rsiSeriesRef.current[ind.id];
-                if (!ind.visible) {
-                    if (existing) { existing.forEach(s => chartRef.current.removeSeries(s)); delete rsiSeriesRef.current[ind.id]; }
-                    return;
-                }
-
                 const results = computeRSI(data, ind);
                 if (!existing) {
-                    const paneOptions = { priceScaleId: 'rsi', lineWidth: 1.5, crosshairMarkerVisible: false, priceLineVisible: false };
-                    const main = chartRef.current.addSeries(LineSeries, { ...paneOptions, color: ind.color });
-                    const smoothed = chartRef.current.addSeries(LineSeries, { ...paneOptions, color: ind.smoothColor });
-                    const bbU = chartRef.current.addSeries(LineSeries, { ...paneOptions, color: ind.bbColor, lineStyle: 2, lineWidth: 1 });
-                    const bbL = chartRef.current.addSeries(LineSeries, { ...paneOptions, color: ind.bbColor, lineStyle: 2, lineWidth: 1 });
-                    const base70 = chartRef.current.addSeries(LineSeries, { ...paneOptions, color: 'rgba(255,255,255,0.1)', lineWidth: 1, lineStyle: 1 });
-                    const base30 = chartRef.current.addSeries(LineSeries, { ...paneOptions, color: 'rgba(255,255,255,0.1)', lineWidth: 1, lineStyle: 1 });
-
-                    existing = [main, smoothed, bbU, bbL, base70, base30];
+                    const opts = { priceScaleId: 'rsi', lineWidth: 1.5, crosshairMarkerVisible: false };
+                    existing = [
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.color }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.smoothColor }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.bbColor, lineStyle: 2 }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.bbColor, lineStyle: 2 }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: 'rgba(255,255,255,0.1)' }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: 'rgba(255,255,255,0.1)' })
+                    ];
                     rsiSeriesRef.current[ind.id] = existing;
                 }
-
-                chartRef.current.priceScale('rsi').applyOptions({ scaleMargins: rsiMargins, borderColor: '#2a2e39' });
-                const [main, smoothed, bbU, bbL, base70, base30] = existing;
-
-                // Always update baselines to match current data time range
+                chartRef.current.priceScale('rsi').applyOptions({ scaleMargins: rsiMargins });
+                const [m, s, bu, bl, b70, b30] = existing;
                 const times = data.map(d => ({ time: d.time }));
-                base70.setData(times.map(t => ({ ...t, value: 70 })));
-                base30.setData(times.map(t => ({ ...t, value: 30 })));
-
-                main.setData(results.rsi);
-                smoothed.setData(results.smoothed);
-                bbU.setData(ind.showBB ? results.bbUpper : []);
-                bbL.setData(ind.showBB ? results.bbLower : []);
+                b70.setData(times.map(t => ({ ...t, value: 70 }))); b30.setData(times.map(t => ({ ...t, value: 30 })));
+                m.setData(results.rsi); s.setData(results.smoothed); bu.setData(ind.showBB ? results.bbUpper : []); bl.setData(ind.showBB ? results.bbLower : []);
             }
-
-            if (ind.type === 'macd') {
+            if (ind.type === 'macd' && ind.visible) {
                 let existing = macdSeriesRef.current[ind.id];
-                if (!ind.visible) {
-                    if (existing) { existing.forEach(s => chartRef.current.removeSeries(s)); delete macdSeriesRef.current[ind.id]; }
-                    return;
-                }
-
-                const results = computeMACD(data, ind);
+                const res = computeMACD(data, ind);
                 if (!existing) {
-                    const paneOptions = { priceScaleId: 'macd', lineWidth: 1.5, crosshairMarkerVisible: false, priceLineVisible: false };
-                    const hist = chartRef.current.addSeries(HistogramSeries, { priceScaleId: 'macd', color: '#26a69a', priceLineVisible: false });
-                    const main = chartRef.current.addSeries(LineSeries, { ...paneOptions, color: '#2962ff' });
-                    const signal = chartRef.current.addSeries(LineSeries, { ...paneOptions, color: '#ff9800' });
-                    const baseline0 = chartRef.current.addSeries(LineSeries, { ...paneOptions, color: 'rgba(255,255,255,0.1)', lineWidth: 1, lineStyle: 1 });
-                    const baseline1X = chartRef.current.addSeries(LineSeries, { ...paneOptions, color: 'rgba(255,255,255,0.05)', lineWidth: 1, lineStyle: 2 });
-                    const baseline1N = chartRef.current.addSeries(LineSeries, { ...paneOptions, color: 'rgba(255,255,255,0.05)', lineWidth: 1, lineStyle: 2 });
-
-                    existing = [main, signal, hist, baseline0, baseline1X, baseline1N];
+                    const opts = { priceScaleId: 'macd', lineWidth: 1.5, crosshairMarkerVisible: false };
+                    existing = [
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: '#2962ff' }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: '#ff9800' }),
+                        chartRef.current.addSeries(HistogramSeries, { priceScaleId: 'macd' }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: 'rgba(255,255,255,0.1)' })
+                    ];
                     macdSeriesRef.current[ind.id] = existing;
                 }
-
-                chartRef.current.priceScale('macd').applyOptions({ scaleMargins: macdMargins, borderColor: '#2a2e39' });
-                const [main, signal, hist, b0, b1x, b1n] = existing;
-
-                // Always update baselines to match current data time range
+                chartRef.current.priceScale('macd').applyOptions({ scaleMargins: macdMargins });
+                const [m, s, h, b0] = existing;
                 const times = data.map(d => ({ time: d.time }));
                 b0.setData(times.map(t => ({ ...t, value: 0 })));
-                b1x.setData(times.map(t => ({ ...t, value: 1 })));
-                b1n.setData(times.map(t => ({ ...t, value: -1 })));
-
-                main.setData(results.macd);
-                signal.setData(results.signal);
-                hist.setData(results.histogram);
+                m.setData(res.macd); s.setData(res.signal); h.setData(res.histogram);
+            }
+            if (ind.type === 'volume_profile' && ind.visible) {
+                setVpBins(computeVolumeProfile(data, ind));
+                vpActive = true;
             }
         });
+        if (!vpActive) setVpBins([]);
 
-        // Fit Content and set initial visible range on new data load
         if (isFirstLoad.current && data.length > 0) {
             const timeScale = chartRef.current.timeScale();
             timeScale.fitContent();
-
-            // Standard TradingView-style right offset
-            const logicalRange = timeScale.getVisibleLogicalRange();
-            if (logicalRange) {
-                timeScale.setVisibleLogicalRange({
-                    from: logicalRange.from,
-                    to: logicalRange.to + 20,
-                });
-            }
+            const lr = timeScale.getVisibleLogicalRange();
+            if (lr) timeScale.setVisibleLogicalRange({ from: lr.from, to: lr.to + 20 });
             isFirstLoad.current = false;
         }
     }, [data, chartType, indicators, symbol, interval]);
 
-    return <div ref={containerRef} style={{ width: '100%', height: '100%' }} />;
+    return (
+        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+            <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+            <svg ref={vpRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }} />
+        </div>
+    );
 };
 
 export default Chart;

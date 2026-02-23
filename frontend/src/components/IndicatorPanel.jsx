@@ -25,7 +25,7 @@ const IndicatorGroupPanel = ({
                 title={`Expand ${title} settings`}
             >
                 <div className="minimized-header">
-                    <span>{groupType === 'rsi' ? '📊 RSI' : '📈 SMA'}</span>
+                    <span>{groupType === 'rsi' ? '📊 RSI' : (groupType === 'vp' ? '📊 VP' : '📈 SMA')}</span>
                 </div>
             </div>
         );
@@ -62,7 +62,10 @@ const IndicatorGroupPanel = ({
                             <div className="indicator-info">
                                 <span className="color-swatch" style={{ backgroundColor: ind.color }} />
                                 <label className="indicator-label">
-                                    {groupType === 'sma' ? `SMA ${idx + 1}` : (groupType === 'rsi' ? `RSI (${ind.length})` : 'Normalized MACD')}
+                                    {groupType === 'sma' ? `SMA ${idx + 1}` :
+                                        groupType === 'rsi' ? `RSI (${ind.length})` :
+                                            groupType === 'macd' ? 'Normalized MACD' :
+                                                groupType === 'volume_profile' ? `Volume Profile (${ind.priceBins})` : 'Indicator'}
                                 </label>
                             </div>
                             <div className="indicator-actions">
@@ -189,6 +192,32 @@ const IndicatorGroupPanel = ({
                                     <input
                                         type="number" min="1" max="500" value={ind.normLookback}
                                         onChange={(e) => updateIndicator(ind.id, { normLookback: Math.max(1, parseInt(e.target.value) || 1) })}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Volume Profile Settings */}
+                        {groupType === 'vp' && (
+                            <div className="indicator-settings">
+                                <div className="setting-item">
+                                    <label>Bins</label>
+                                    <input
+                                        type="number" min="10" max="200" value={ind.priceBins}
+                                        onChange={(e) => updateIndicator(ind.id, { priceBins: Math.max(10, parseInt(e.target.value) || 10) })}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Volume Profile Settings */}
+                        {groupType === 'volume_profile' && (
+                            <div className="indicator-settings">
+                                <div className="setting-item">
+                                    <label>Bins</label>
+                                    <input
+                                        type="number" min="10" max="500" value={ind.priceBins}
+                                        onChange={(e) => updateIndicator(ind.id, { priceBins: Math.max(10, parseInt(e.target.value) || 10) })}
                                     />
                                 </div>
                             </div>

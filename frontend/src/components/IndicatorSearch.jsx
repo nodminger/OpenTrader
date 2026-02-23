@@ -8,6 +8,7 @@ const IndicatorSearch = ({ onAddIndicator, onClose }) => {
         { id: 'sma', name: 'Simple Moving Average' },
         { id: 'rsi', name: 'Relative Strength Index' },
         { id: 'macd', name: 'Normalized MACD' },
+        { id: 'volume_profile', name: 'Volume Profile / HD' },
     ];
 
     const filtered = indicators.filter(ind =>
