@@ -20,12 +20,16 @@ const IndicatorGroupPanel = ({
     if (isMinimized) {
         return (
             <div
-                className={`indicator-panel minimized ${groupType === 'rsi' ? 'has-rsi' : ''}`}
+                className={`indicator-panel minimized ${['rsi', 'macd', 'volume_profile'].includes(groupType) ? 'has-oscillator' : ''}`}
                 onClick={() => setIsMinimized(false)}
                 title={`Expand ${title} settings`}
             >
                 <div className="minimized-header">
-                    <span>{groupType === 'rsi' ? '📊 RSI' : (groupType === 'vp' ? '📊 VP' : '📈 SMA')}</span>
+                    <span>
+                        {groupType === 'rsi' ? '📊 RSI' :
+                            groupType === 'macd' ? '📊 MACD' :
+                                groupType === 'volume_profile' ? '📊 VP' : '📈 SMA'}
+                    </span>
                 </div>
             </div>
         );
