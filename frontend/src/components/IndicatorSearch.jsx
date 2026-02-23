@@ -9,6 +9,7 @@ const IndicatorSearch = ({ onAddIndicator, onClose }) => {
         { id: 'rsi', name: 'Relative Strength Index' },
         { id: 'macd', name: 'Normalized MACD' },
         { id: 'volume_profile', name: 'Volume Profile / HD' },
+        { id: 'bb', name: 'Bollinger Bands' },
     ];
 
     const filtered = indicators.filter(ind =>

@@ -28,7 +28,8 @@ const IndicatorGroupPanel = ({
                     <span>
                         {groupType === 'rsi' ? '📊 RSI' :
                             groupType === 'macd' ? '📊 MACD' :
-                                groupType === 'volume_profile' ? '📊 VP' : '📈 SMA'}
+                                groupType === 'bb' ? '📊 BB' :
+                                    groupType === 'volume_profile' ? '📊 VP' : '📈 SMA'}
                     </span>
                 </div>
             </div>
@@ -69,7 +70,8 @@ const IndicatorGroupPanel = ({
                                     {groupType === 'sma' ? `SMA ${idx + 1}` :
                                         groupType === 'rsi' ? `RSI (${ind.length})` :
                                             groupType === 'macd' ? 'Normalized MACD' :
-                                                groupType === 'volume_profile' ? `Volume Profile (${ind.priceBins})` : 'Indicator'}
+                                                groupType === 'volume_profile' ? `Volume Profile (${ind.priceBins})` :
+                                                    groupType === 'bb' ? `BB (${ind.length}, ${ind.stdDev})` : 'Indicator'}
                                 </label>
                             </div>
                             <div className="indicator-actions">
@@ -223,6 +225,57 @@ const IndicatorGroupPanel = ({
                                         type="number" min="10" max="500" value={ind.priceBins}
                                         onChange={(e) => updateIndicator(ind.id, { priceBins: Math.max(10, parseInt(e.target.value) || 10) })}
                                     />
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Bollinger Bands Settings */}
+                        {groupType === 'bb' && (
+                            <div className="indicator-settings rsi-grid">
+                                <div className="setting-item">
+                                    <label>Length</label>
+                                    <input
+                                        type="number" min="1" max="500" value={ind.length}
+                                        onChange={(e) => updateIndicator(ind.id, { length: Math.max(1, parseInt(e.target.value) || 1) })}
+                                    />
+                                </div>
+                                <div className="setting-item">
+                                    <label>StdDev</label>
+                                    <input
+                                        type="number" step="0.1" min="0.1" max="10" value={ind.stdDev}
+                                        onChange={(e) => updateIndicator(ind.id, { stdDev: Math.max(0.1, parseFloat(e.target.value) || 0.1) })}
+                                    />
+                                </div>
+                                <div className="setting-item">
+                                    <label>Source</label>
+                                    <select
+                                        value={ind.source}
+                                        onChange={(e) => updateIndicator(ind.id, { source: e.target.value })}
+                                    >
+                                        {['Close', 'Open', 'High', 'Low', 'HL2', 'HLC3', 'OHLC4', 'HLCC4'].map(src => (
+                                            <option key={src} value={src}>{src}</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="setting-item">
+                                    <label>Offset</label>
+                                    <input
+                                        type="number" value={ind.offset}
+                                        onChange={(e) => updateIndicator(ind.id, { offset: parseInt(e.target.value) || 0 })}
+                                    />
+                                </div>
+                                <div className="setting-item" style={{ gridColumn: 'span 2' }}>
+                                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', fontSize: '10px' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <input type="checkbox" checked={ind.showPriceLabels} onChange={(e) => updateIndicator(ind.id, { showPriceLabels: e.target.checked })} /> Lbls
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <input type="checkbox" checked={ind.showStatusValues} onChange={(e) => updateIndicator(ind.id, { showStatusValues: e.target.checked })} /> Vals
+                                        </label>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                            <input type="checkbox" checked={ind.showInputInStatus} onChange={(e) => updateIndicator(ind.id, { showInputInStatus: e.target.checked })} /> Input
+                                        </label>
+                                    </div>
                                 </div>
                             </div>
                         )}

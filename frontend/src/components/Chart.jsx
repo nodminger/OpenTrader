@@ -10,6 +10,7 @@ import { computeSMA } from '../Indicators/sma';
 import { computeRSI } from '../Indicators/rsi';
 import { computeMACD } from '../Indicators/macd';
 import { computeVolumeProfile } from '../Indicators/volumeProfile';
+import { computeBollingerBands } from '../Indicators/bollinger';
 
 // Compute Heikin-Ashi candles from OHLCV data
 function computeHeikinAshi(data) {
@@ -43,8 +44,11 @@ const Chart = ({
     const smaSeriesRef = useRef({});
     const rsiSeriesRef = useRef({});
     const macdSeriesRef = useRef({});
+    const bbSeriesRef = useRef({});
     const vpRef = useRef(null);
+    const bbFillRef = useRef(null);
     const [vpBins, setVpBins] = useState([]);
+    const [bbFillData, setBbFillData] = useState(null);
 
     const isFirstLoad = useRef(true);
     const lastSymbolInterval = useRef(`${symbol}-${interval}`);
@@ -104,7 +108,8 @@ const Chart = ({
                 price: param.seriesData.get(priceSeriesRef.current) ?? null,
                 smas: {},
                 rsis: {},
-                macds: {}
+                macds: {},
+                bbs: {}
             };
 
             Object.entries(smaSeriesRef.current).forEach(([id, series]) => {
@@ -144,6 +149,20 @@ const Chart = ({
                 }
             });
 
+            Object.entries(bbSeriesRef.current).forEach(([id, seriesArr]) => {
+                const [basis, upper, lower] = seriesArr;
+                const bVal = param.seriesData.get(basis);
+                const uVal = param.seriesData.get(upper);
+                const lVal = param.seriesData.get(lower);
+                if (bVal) {
+                    results.bbs[id] = {
+                        basis: bVal.value,
+                        upper: uVal?.value ?? null,
+                        lower: lVal?.value ?? null
+                    };
+                }
+            });
+
             onCrosshairMoveRef.current(results);
         };
         chart.subscribeCrosshairMove(crosshairHandler);
@@ -169,8 +188,47 @@ const Chart = ({
             smaSeriesRef.current = {};
             rsiSeriesRef.current = {};
             macdSeriesRef.current = {};
+            bbSeriesRef.current = {};
         };
     }, []);
+
+    // Sync BB Background Shade
+    useEffect(() => {
+        if (!chartRef.current || !bbFillRef.current || !bbFillData || !priceSeriesRef.current) return;
+        const svg = bbFillRef.current;
+        while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+        const bbInd = indicators.find(i => i.type === 'bb' && i.visible);
+        if (!bbInd) return;
+
+        const { upper, lower } = bbFillData;
+        if (upper.length === 0 || lower.length === 0) return;
+
+        const ts = chartRef.current.timeScale();
+        const points = [];
+
+        // Build the shaded polygon
+        // Forward through upper band
+        upper.forEach(p => {
+            const x = ts.timeToCoordinate(p.time);
+            const y = priceSeriesRef.current.priceToCoordinate(p.value);
+            if (x !== null && y !== null) points.push(`${x},${y}`);
+        });
+        // Backward through lower band
+        for (let i = lower.length - 1; i >= 0; i--) {
+            const p = lower[i];
+            const x = ts.timeToCoordinate(p.time);
+            const y = priceSeriesRef.current.priceToCoordinate(p.value);
+            if (x !== null && y !== null) points.push(`${x},${y}`);
+        }
+
+        if (points.length > 0) {
+            const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+            poly.setAttribute('points', points.join(' '));
+            poly.setAttribute('fill', bbInd.fillColor);
+            svg.appendChild(poly);
+        }
+    }, [bbFillData, indicators, data]); // Redraw on data change as well to sync with timeScale
 
     // Sync VP SVG Overlays
     useEffect(() => {
@@ -181,7 +239,6 @@ const Chart = ({
         const vpInd = indicators.find(i => i.type === 'volume_profile' && i.visible);
         if (!vpInd || vpBins.length === 0 || !priceSeriesRef.current) return;
 
-        const pScale = priceSeriesRef.current.priceScale();
         const width = containerRef.current.clientWidth;
 
         vpBins.forEach(bin => {
@@ -273,7 +330,7 @@ const Chart = ({
 
         // Indicator Management
         const currentIds = new Set(indicators.map(ind => ind.id));
-        [smaSeriesRef, rsiSeriesRef, macdSeriesRef].forEach(ref => {
+        [smaSeriesRef, rsiSeriesRef, macdSeriesRef, bbSeriesRef].forEach(ref => {
             Object.keys(ref.current).forEach(id => {
                 if (!currentIds.has(id)) {
                     try {
@@ -286,6 +343,7 @@ const Chart = ({
         });
 
         let vpActive = false;
+        let bbActive = false;
         indicators.forEach(ind => {
             if (ind.type === 'sma' && ind.visible) {
                 const existing = smaSeriesRef.current[ind.id];
@@ -337,8 +395,34 @@ const Chart = ({
                 setVpBins(computeVolumeProfile(data, ind));
                 vpActive = true;
             }
+            if (ind.type === 'bb' && ind.visible) {
+                let existing = bbSeriesRef.current[ind.id];
+                const res = computeBollingerBands(data, ind);
+                if (!existing) {
+                    const opts = { lineWidth: 1.2, crosshairMarkerVisible: false, lastValueVisible: ind.showPriceLabels };
+                    existing = [
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.basisColor }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.upperColor, lineWidth: 1 }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.lowerColor, lineWidth: 1 })
+                    ];
+                    bbSeriesRef.current[ind.id] = existing;
+                }
+                const [basis, upper, lower] = existing;
+
+                // Update visibility of labels dynamically
+                basis.applyOptions({ lastValueVisible: ind.showPriceLabels });
+                upper.applyOptions({ lastValueVisible: ind.showPriceLabels });
+                lower.applyOptions({ lastValueVisible: ind.showPriceLabels });
+
+                basis.setData(res.basis);
+                upper.setData(res.upper);
+                lower.setData(res.lower);
+                setBbFillData({ upper: res.upper, lower: res.lower });
+                bbActive = true;
+            }
         });
         if (!vpActive) setVpBins([]);
+        if (!bbActive) setBbFillData(null);
 
         if (isFirstLoad.current && data.length > 0) {
             const timeScale = chartRef.current.timeScale();
@@ -352,6 +436,8 @@ const Chart = ({
     return (
         <div style={{ position: 'relative', width: '100%', height: '100%' }}>
             <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
+            {/* Overlay SVGs for Background Shades and Volume Profiles */}
+            <svg ref={bbFillRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0, opacity: 0.8 }} />
             <svg ref={vpRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }} />
         </div>
     );

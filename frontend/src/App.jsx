@@ -193,6 +193,7 @@ function App() {
   const addIndicator = (type) => {
     if (type === 'macd' && indicators.some(i => i.type === 'macd')) return;
     if (type === 'volume_profile' && indicators.some(i => i.type === 'volume_profile')) return;
+    if (type === 'bb' && indicators.some(i => i.type === 'bb')) return;
 
     if (type === 'sma') {
       const slots = DEFAULT_SMA_LENGTHS.map((length, i) => ({
@@ -253,6 +254,26 @@ function App() {
         priceBins: 40,
         visible: true,
         color: 'rgba(38, 166, 154, 0.4)',
+      }]);
+    }
+
+    if (type === 'bb') {
+      setIndicators(prev => [...prev, {
+        id: 'bb-main',
+        type: 'bb',
+        length: 20,
+        stdDev: 2,
+        source: 'Close',
+        offset: 0,
+        precision: 2,
+        showPriceLabels: true,
+        showStatusValues: true,
+        showInputInStatus: true,
+        visible: true,
+        basisColor: '#2962ff',
+        upperColor: '#ff9800',
+        lowerColor: '#ff9800',
+        fillColor: 'rgba(41, 98, 255, 0.1)',
       }]);
     }
   };
@@ -336,11 +357,30 @@ function App() {
             return (
               <div key={ind.id} className="legend-item">
                 <span className="legend-bullet" style={{ backgroundColor: ind.color }}></span>
-                <span className="legend-label">SMA {ind.length}</span>
+                <span className="legend-label">SMA {ind.length}{ind.source !== 'close' && <span className="legend-source">({ind.source})</span>}</span>
                 <span className="legend-value" style={{ color: ind.color }}>{val != null ? val.toFixed(2) : ''}</span>
               </div>
             );
           })}
+        </div>
+
+        {/* BOLLINGER BANDS LEGEND */}
+        <div className="chart-legend-indicators price-indicators">
+          {indicators.filter(i => i.type === 'bb' && i.visible).map(ind => (
+            <div key={ind.id} className="legend-item">
+              <span className="legend-bullet" style={{ backgroundColor: ind.basisColor }}></span>
+              <span className="legend-label">BB{ind.showInputInStatus ? ` (${ind.length}, ${ind.stdDev})` : ''}</span>
+              {ind.showStatusValues && (
+                <span className="legend-value">
+                  <span style={{ color: ind.basisColor }}>{hoveredData?.bbs?.[ind.id]?.basis?.toFixed(ind.precision) || ''}</span>
+                  <span style={{ margin: '0 4px', opacity: 0.5 }}>/</span>
+                  <span style={{ color: ind.upperColor }}>{hoveredData?.bbs?.[ind.id]?.upper?.toFixed(ind.precision) || ''}</span>
+                  <span style={{ margin: '0 4px', opacity: 0.5 }}>/</span>
+                  <span style={{ color: ind.lowerColor }}>{hoveredData?.bbs?.[ind.id]?.lower?.toFixed(ind.precision) || ''}</span>
+                </span>
+              )}
+            </div>
+          ))}
         </div>
 
         {/* RSI LEGEND (In the RSI pane area) */}
@@ -449,6 +489,16 @@ function App() {
             title="Volume Profile / HD"
             groupType="volume_profile"
             indicators={indicators.filter(i => i.type === 'volume_profile')}
+            updateIndicator={updateIndicator}
+            removeIndicator={removeIndicator}
+            removeIndicatorGroup={removeIndicatorGroup}
+            toggleIndicator={toggleIndicator}
+          />
+          {/* Bollinger Bands Panel */}
+          <IndicatorPanel
+            title="Bollinger Bands"
+            groupType="bb"
+            indicators={indicators.filter(i => i.type === 'bb')}
             updateIndicator={updateIndicator}
             removeIndicator={removeIndicator}
             removeIndicatorGroup={removeIndicatorGroup}
