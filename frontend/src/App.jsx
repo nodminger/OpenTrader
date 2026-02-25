@@ -326,6 +326,16 @@ function App() {
       }]);
     }
 
+    if (type === 'atr') {
+      setIndicators(prev => [...prev, {
+        id: 'atr-main',
+        type: 'atr',
+        length: 14,
+        visible: true,
+        color: '#ff5252',
+      }]);
+    }
+
     if (type === 'tsi') {
       setIndicators(prev => [...prev, {
         id: 'tsi-main',
