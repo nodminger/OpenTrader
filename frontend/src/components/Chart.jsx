@@ -11,6 +11,7 @@ import { computeRSI } from '../Indicators/rsi';
 import { computeMACD } from '../Indicators/macd';
 import { computeVolumeProfile } from '../Indicators/volumeProfile';
 import { computeBollingerBands } from '../Indicators/bollinger';
+import { computeStochastic } from '../Indicators/stoch';
 
 // Compute Heikin-Ashi candles from OHLCV data
 function computeHeikinAshi(data) {
@@ -45,6 +46,7 @@ const Chart = ({
     const rsiSeriesRef = useRef({});
     const macdSeriesRef = useRef({});
     const bbSeriesRef = useRef({});
+    const stochSeriesRef = useRef({});
     const vpRef = useRef(null);
     const bbFillRef = useRef(null);
     const [vpBins, setVpBins] = useState([]);
@@ -109,7 +111,8 @@ const Chart = ({
                 smas: {},
                 rsis: {},
                 macds: {},
-                bbs: {}
+                bbs: {},
+                stochs: {},
             };
 
             Object.entries(smaSeriesRef.current).forEach(([id, series]) => {
@@ -163,6 +166,18 @@ const Chart = ({
                 }
             });
 
+            Object.entries(stochSeriesRef.current).forEach(([id, seriesArr]) => {
+                const [k, d] = seriesArr;
+                const kVal = param.seriesData.get(k);
+                const dVal = param.seriesData.get(d);
+                if (kVal) {
+                    results.stochs[id] = {
+                        k: kVal.value,
+                        d: dVal?.value ?? null
+                    };
+                }
+            });
+
             onCrosshairMoveRef.current(results);
         };
         chart.subscribeCrosshairMove(crosshairHandler);
@@ -189,6 +204,7 @@ const Chart = ({
             rsiSeriesRef.current = {};
             macdSeriesRef.current = {};
             bbSeriesRef.current = {};
+            stochSeriesRef.current = {};
         };
     }, []);
 
@@ -275,24 +291,40 @@ const Chart = ({
 
         const hasRsi = indicators.some(i => i.type === 'rsi' && i.visible);
         const hasMacd = indicators.some(i => i.type === 'macd' && i.visible);
-        const oscillatorCount = (hasRsi ? 1 : 0) + (hasMacd ? 1 : 0);
+        const hasStoch = indicators.some(i => i.type === 'stoch' && i.visible);
+
+        const activePanes = [];
+        if (hasRsi) activePanes.push('rsi');
+        if (hasStoch) activePanes.push('stoch');
+        if (hasMacd) activePanes.push('macd');
+
+        const oscillatorCount = activePanes.length;
 
         // Layout margins
         let priceBottom = 0.08;
         let volTop = 0.82, volBottom = 0;
-        let rsiMargins = { top: 0.80, bottom: 0.02 };
-        let macdMargins = { top: 0.80, bottom: 0.02 };
+
+        const marginsMap = {
+            rsi: { top: 0.80, bottom: 0.02 },
+            macd: { top: 0.80, bottom: 0.02 },
+            stoch: { top: 0.80, bottom: 0.02 }
+        };
 
         if (oscillatorCount === 1) {
             priceBottom = 0.40;
             volTop = 0.65; volBottom = 0.25;
-            rsiMargins = { top: 0.80, bottom: 0.02 };
-            macdMargins = { top: 0.80, bottom: 0.02 };
+            marginsMap[activePanes[0]] = { top: 0.80, bottom: 0.02 };
         } else if (oscillatorCount === 2) {
             priceBottom = 0.55;
             volTop = 0.48; volBottom = 0.40;
-            rsiMargins = { top: 0.62, bottom: 0.20 };
-            macdMargins = { top: 0.82, bottom: 0.02 };
+            marginsMap[activePanes[0]] = { top: 0.62, bottom: 0.20 };
+            marginsMap[activePanes[1]] = { top: 0.82, bottom: 0.02 };
+        } else if (oscillatorCount === 3) {
+            priceBottom = 0.65;
+            volTop = 0.36; volBottom = 0.60;
+            marginsMap[activePanes[0]] = { top: 0.42, bottom: 0.40 };
+            marginsMap[activePanes[1]] = { top: 0.62, bottom: 0.20 };
+            marginsMap[activePanes[2]] = { top: 0.82, bottom: 0.02 };
         }
 
         chartRef.current.priceScale('right').applyOptions({ scaleMargins: { top: 0.02, bottom: priceBottom } });
@@ -366,7 +398,7 @@ const Chart = ({
                     ];
                     rsiSeriesRef.current[ind.id] = existing;
                 }
-                chartRef.current.priceScale('rsi').applyOptions({ scaleMargins: rsiMargins });
+                chartRef.current.priceScale('rsi').applyOptions({ scaleMargins: marginsMap.rsi });
                 const [m, s, bu, bl, b70, b30] = existing;
                 const times = data.map(d => ({ time: d.time }));
                 b70.setData(times.map(t => ({ ...t, value: 70 }))); b30.setData(times.map(t => ({ ...t, value: 30 })));
@@ -385,7 +417,7 @@ const Chart = ({
                     ];
                     macdSeriesRef.current[ind.id] = existing;
                 }
-                chartRef.current.priceScale('macd').applyOptions({ scaleMargins: macdMargins });
+                chartRef.current.priceScale('macd').applyOptions({ scaleMargins: marginsMap.macd });
                 const [m, s, h, b0] = existing;
                 const times = data.map(d => ({ time: d.time }));
                 b0.setData(times.map(t => ({ ...t, value: 0 })));
@@ -419,6 +451,27 @@ const Chart = ({
                 lower.setData(res.lower);
                 setBbFillData({ upper: res.upper, lower: res.lower });
                 bbActive = true;
+            }
+            if (ind.type === 'stoch' && ind.visible) {
+                let existing = stochSeriesRef.current[ind.id];
+                const res = computeStochastic(data, ind);
+                if (!existing) {
+                    const opts = { priceScaleId: 'stoch', lineWidth: 1.5, crosshairMarkerVisible: false };
+                    existing = [
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.kColor || '#2962ff' }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.dColor || '#ff9800' }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: 'rgba(255,255,255,0.1)', lineStyle: 2 }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: 'rgba(255,255,255,0.1)', lineStyle: 2 })
+                    ];
+                    stochSeriesRef.current[ind.id] = existing;
+                }
+                chartRef.current.priceScale('stoch').applyOptions({ scaleMargins: marginsMap.stoch });
+                const [k, d, upper, lower] = existing;
+                const times = data.map(d => ({ time: d.time }));
+                upper.setData(times.map(t => ({ ...t, value: ind.upperLine || 80 })));
+                lower.setData(times.map(t => ({ ...t, value: ind.lowerLine || 20 })));
+                k.setData(res.k);
+                d.setData(res.d);
             }
         });
         if (!vpActive) setVpBins([]);

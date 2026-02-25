@@ -194,6 +194,7 @@ function App() {
     if (type === 'macd' && indicators.some(i => i.type === 'macd')) return;
     if (type === 'volume_profile' && indicators.some(i => i.type === 'volume_profile')) return;
     if (type === 'bb' && indicators.some(i => i.type === 'bb')) return;
+    if (type === 'stoch' && indicators.some(i => i.type === 'stoch')) return;
 
     if (type === 'sma') {
       const slots = DEFAULT_SMA_LENGTHS.map((length, i) => ({
@@ -274,6 +275,21 @@ function App() {
         upperColor: '#ff9800',
         lowerColor: '#ff9800',
         fillColor: 'rgba(41, 98, 255, 0.1)',
+      }]);
+    }
+
+    if (type === 'stoch') {
+      setIndicators(prev => [...prev, {
+        id: 'stoch-main',
+        type: 'stoch',
+        length: 14,
+        dLength: 3,
+        upperLine: 80,
+        lowerLine: 20,
+        visible: true,
+        kColor: '#2962ff',
+        dColor: '#ff9800',
+        precision: 2,
       }]);
     }
   };
@@ -439,6 +455,26 @@ function App() {
           </div>
         )}
 
+        {/* STOCHASTIC LEGEND */}
+        {indicators.find(i => i.type === 'stoch' && i.visible) && (
+          <div className="chart-legend-indicators stoch-pane-indicators">
+            <div className="legend-item">
+              <span className="legend-bullet" style={{ backgroundColor: '#2962ff' }}></span>
+              <span className="legend-label">Stoch %K</span>
+              <span className="legend-value" style={{ color: '#2962ff' }}>
+                {hoveredData?.stochs?.['stoch-main']?.k?.toFixed(2) || ''}
+              </span>
+            </div>
+            <div className="legend-item">
+              <span className="legend-bullet" style={{ backgroundColor: '#ff9800' }}></span>
+              <span className="legend-label">%D</span>
+              <span className="legend-value" style={{ color: '#ff9800' }}>
+                {hoveredData?.stochs?.['stoch-main']?.d?.toFixed(2) || ''}
+              </span>
+            </div>
+          </div>
+        )}
+
         {showIndicatorSearch && (
           <IndicatorSearch
             onAddIndicator={addIndicator}
@@ -499,6 +535,16 @@ function App() {
             title="Bollinger Bands"
             groupType="bb"
             indicators={indicators.filter(i => i.type === 'bb')}
+            updateIndicator={updateIndicator}
+            removeIndicator={removeIndicator}
+            removeIndicatorGroup={removeIndicatorGroup}
+            toggleIndicator={toggleIndicator}
+          />
+          {/* Stochastic Oscillator Panel */}
+          <IndicatorPanel
+            title="Stochastic Oscillator"
+            groupType="stoch"
+            indicators={indicators.filter(i => i.type === 'stoch')}
             updateIndicator={updateIndicator}
             removeIndicator={removeIndicator}
             removeIndicatorGroup={removeIndicatorGroup}

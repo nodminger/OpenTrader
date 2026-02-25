@@ -10,6 +10,7 @@ const IndicatorSearch = ({ onAddIndicator, onClose }) => {
         { id: 'macd', name: 'Normalized MACD' },
         { id: 'volume_profile', name: 'Volume Profile / HD' },
         { id: 'bb', name: 'Bollinger Bands' },
+        { id: 'stoch', name: 'Stochastic Oscillator' },
     ];
 
     const filtered = indicators.filter(ind =>

@@ -29,7 +29,8 @@ const IndicatorGroupPanel = ({
                         {groupType === 'rsi' ? '📊 RSI' :
                             groupType === 'macd' ? '📊 MACD' :
                                 groupType === 'bb' ? '📊 BB' :
-                                    groupType === 'volume_profile' ? '📊 VP' : '📈 SMA'}
+                                    groupType === 'stoch' ? '📊 STOCH' :
+                                        groupType === 'volume_profile' ? '📊 VP' : '📈 SMA'}
                     </span>
                 </div>
             </div>
@@ -71,7 +72,8 @@ const IndicatorGroupPanel = ({
                                         groupType === 'rsi' ? `RSI (${ind.length})` :
                                             groupType === 'macd' ? 'Normalized MACD' :
                                                 groupType === 'volume_profile' ? `Volume Profile (${ind.priceBins})` :
-                                                    groupType === 'bb' ? `BB (${ind.length}, ${ind.stdDev})` : 'Indicator'}
+                                                    groupType === 'bb' ? `BB (${ind.length}, ${ind.stdDev})` :
+                                                        groupType === 'stoch' ? `Stoch (${ind.length}, ${ind.dLength})` : 'Indicator'}
                                 </label>
                             </div>
                             <div className="indicator-actions">
@@ -276,6 +278,39 @@ const IndicatorGroupPanel = ({
                                             <input type="checkbox" checked={ind.showInputInStatus} onChange={(e) => updateIndicator(ind.id, { showInputInStatus: e.target.checked })} /> Input
                                         </label>
                                     </div>
+                                </div>
+                            </div>
+                        )}
+                        {/* Stochastic Oscillator Settings */}
+                        {groupType === 'stoch' && (
+                            <div className="indicator-settings rsi-grid">
+                                <div className="setting-item">
+                                    <label>Length</label>
+                                    <input
+                                        type="number" min="1" max="500" value={ind.length}
+                                        onChange={(e) => updateIndicator(ind.id, { length: Math.max(1, parseInt(e.target.value) || 1) })}
+                                    />
+                                </div>
+                                <div className="setting-item">
+                                    <label>D Length</label>
+                                    <input
+                                        type="number" min="1" max="500" value={ind.dLength}
+                                        onChange={(e) => updateIndicator(ind.id, { dLength: Math.max(1, parseInt(e.target.value) || 1) })}
+                                    />
+                                </div>
+                                <div className="setting-item">
+                                    <label>Upper</label>
+                                    <input
+                                        type="number" min="1" max="100" value={ind.upperLine}
+                                        onChange={(e) => updateIndicator(ind.id, { upperLine: parseInt(e.target.value) || 0 })}
+                                    />
+                                </div>
+                                <div className="setting-item">
+                                    <label>Lower</label>
+                                    <input
+                                        type="number" min="1" max="100" value={ind.lowerLine}
+                                        onChange={(e) => updateIndicator(ind.id, { lowerLine: parseInt(e.target.value) || 0 })}
+                                    />
                                 </div>
                             </div>
                         )}
