@@ -197,6 +197,7 @@ function App() {
     if (type === 'stoch' && indicators.some(i => i.type === 'stoch')) return;
     if (type === 'supertrend' && indicators.some(i => i.type === 'supertrend')) return;
     if (type === 'atr' && indicators.some(i => i.type === 'atr')) return;
+    if (type === 'ichimoku' && indicators.some(i => i.type === 'ichimoku')) return;
 
     if (type === 'sma') {
       const slots = DEFAULT_SMA_LENGTHS.map((length, i) => ({
@@ -307,13 +308,20 @@ function App() {
       }]);
     }
 
-    if (type === 'atr') {
+    if (type === 'ichimoku') {
       setIndicators(prev => [...prev, {
-        id: 'atr-main',
-        type: 'atr',
-        length: 14,
+        id: 'ichimoku-main',
+        type: 'ichimoku',
+        conversionLength: 9,
+        baseLength: 26,
+        spanBLength: 52,
+        laggingLength: 26,
         visible: true,
-        color: '#ff5252',
+        tenkanColor: '#2962ff',
+        kijunColor: '#ff9800',
+        spanAColor: 'rgba(38, 166, 154, 0.4)',
+        spanBColor: 'rgba(239, 83, 80, 0.4)',
+        chikouColor: '#9c27b0',
       }]);
     }
   };
@@ -416,6 +424,23 @@ function App() {
                 <span className="legend-value" style={{ color: color }}>
                   {data?.value?.toFixed(2) || ''}
                 </span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* ICHIMOKU LEGEND */}
+        <div className="chart-legend-indicators price-indicators">
+          {indicators.filter(i => i.type === 'ichimoku' && i.visible).map(ind => {
+            const data = hoveredData?.ichimoku?.[ind.id];
+            return (
+              <div key={ind.id} className="legend-item" style={{ fontSize: '11px' }}>
+                <span className="legend-label">Ichimoku</span>
+                <span style={{ color: ind.tenkanColor, marginLeft: '4px' }}>T: {data?.tenkan?.toFixed(2) || ''}</span>
+                <span style={{ color: ind.kijunColor, marginLeft: '4px' }}>K: {data?.kijun?.toFixed(2) || ''}</span>
+                <span style={{ color: '#26a69a', marginLeft: '4px' }}>SA: {data?.spanA?.toFixed(2) || ''}</span>
+                <span style={{ color: '#ef5350', marginLeft: '4px' }}>SB: {data?.spanB?.toFixed(2) || ''}</span>
+                <span style={{ color: ind.chikouColor, marginLeft: '4px' }}>C: {data?.chikou?.toFixed(2) || ''}</span>
               </div>
             );
           })}
@@ -620,6 +645,16 @@ function App() {
             title="Average True Range"
             groupType="atr"
             indicators={indicators.filter(i => i.type === 'atr')}
+            updateIndicator={updateIndicator}
+            removeIndicator={removeIndicator}
+            removeIndicatorGroup={removeIndicatorGroup}
+            toggleIndicator={toggleIndicator}
+          />
+          {/* Ichimoku Panel */}
+          <IndicatorPanel
+            title="Ichimoku Cloud"
+            groupType="ichimoku"
+            indicators={indicators.filter(i => i.type === 'ichimoku')}
             updateIndicator={updateIndicator}
             removeIndicator={removeIndicator}
             removeIndicatorGroup={removeIndicatorGroup}

@@ -13,6 +13,7 @@ const IndicatorSearch = ({ onAddIndicator, onClose }) => {
         { id: 'stoch', name: 'Stochastic Oscillator' },
         { id: 'supertrend', name: 'Super Trend' },
         { id: 'atr', name: 'Average True Range' },
+        { id: 'ichimoku', name: 'Ichimoku Cloud' },
     ];
 
     const filtered = indicators.filter(ind =>

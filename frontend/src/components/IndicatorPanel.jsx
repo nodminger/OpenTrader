@@ -32,7 +32,8 @@ const IndicatorGroupPanel = ({
                                     groupType === 'stoch' ? '📊 STOCH' :
                                         groupType === 'supertrend' ? '📊 SUPERTREND' :
                                             groupType === 'atr' ? '📊 ATR' :
-                                                groupType === 'volume_profile' ? '📊 VP' : '📈 SMA'}
+                                                groupType === 'ichimoku' ? '📊 ICHIMOKU' :
+                                                    groupType === 'volume_profile' ? '📊 VP' : '📈 SMA'}
                     </span>
                 </div>
             </div>
@@ -77,7 +78,8 @@ const IndicatorGroupPanel = ({
                                                     groupType === 'bb' ? `BB (${ind.length}, ${ind.stdDev})` :
                                                         groupType === 'stoch' ? `Stoch (${ind.length}, ${ind.dLength})` :
                                                             groupType === 'supertrend' ? `Supertrend (${ind.atrLength}, ${ind.factor})` :
-                                                                groupType === 'atr' ? `ATR (${ind.length})` : 'Indicator'}
+                                                                groupType === 'atr' ? `ATR (${ind.length})` :
+                                                                    groupType === 'ichimoku' ? `Ichimoku Cloud` : 'Indicator'}
                                 </label>
                             </div>
                             <div className="indicator-actions">
@@ -345,6 +347,39 @@ const IndicatorGroupPanel = ({
                                     <input
                                         type="number" min="1" max="500" value={ind.length}
                                         onChange={(e) => updateIndicator(ind.id, { length: Math.max(1, parseInt(e.target.value) || 1) })}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        {/* Ichimoku Settings */}
+                        {groupType === 'ichimoku' && (
+                            <div className="indicator-settings rsi-grid">
+                                <div className="setting-item">
+                                    <label>Conv Length</label>
+                                    <input
+                                        type="number" min="1" max="500" value={ind.conversionLength}
+                                        onChange={(e) => updateIndicator(ind.id, { conversionLength: Math.max(1, parseInt(e.target.value) || 1) })}
+                                    />
+                                </div>
+                                <div className="setting-item">
+                                    <label>Base Length</label>
+                                    <input
+                                        type="number" min="1" max="500" value={ind.baseLength}
+                                        onChange={(e) => updateIndicator(ind.id, { baseLength: Math.max(1, parseInt(e.target.value) || 1) })}
+                                    />
+                                </div>
+                                <div className="setting-item">
+                                    <label>Span B Length</label>
+                                    <input
+                                        type="number" min="1" max="500" value={ind.spanBLength}
+                                        onChange={(e) => updateIndicator(ind.id, { spanBLength: Math.max(1, parseInt(e.target.value) || 1) })}
+                                    />
+                                </div>
+                                <div className="setting-item">
+                                    <label>Lagging Line</label>
+                                    <input
+                                        type="number" min="1" max="500" value={ind.laggingLength}
+                                        onChange={(e) => updateIndicator(ind.id, { laggingLength: Math.max(1, parseInt(e.target.value) || 1) })}
                                     />
                                 </div>
                             </div>

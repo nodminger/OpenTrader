@@ -14,6 +14,7 @@ import { computeBollingerBands } from '../Indicators/bollinger';
 import { computeStochastic } from '../Indicators/stoch';
 import { computeSuperTrend } from '../Indicators/supertrend';
 import { computeATR } from '../Indicators/atr';
+import { computeIchimoku } from '../Indicators/ichimoku';
 
 // Compute Heikin-Ashi candles from OHLCV data
 function computeHeikinAshi(data) {
@@ -51,10 +52,13 @@ const Chart = ({
     const stochSeriesRef = useRef({});
     const supertrendSeriesRef = useRef({});
     const atrSeriesRef = useRef({});
+    const ichimokuSeriesRef = useRef({});
     const vpRef = useRef(null);
     const bbFillRef = useRef(null);
+    const ichimokuFillRef = useRef(null);
     const [vpBins, setVpBins] = useState([]);
     const [bbFillData, setBbFillData] = useState(null);
+    const [ichimokuFillData, setIchimokuFillData] = useState(null);
 
     const isFirstLoad = useRef(true);
     const lastSymbolInterval = useRef(`${symbol}-${interval}`);
@@ -119,6 +123,7 @@ const Chart = ({
                 stochs: {},
                 supertrend: {},
                 atrs: {},
+                ichimoku: {},
             };
 
             Object.entries(smaSeriesRef.current).forEach(([id, series]) => {
@@ -203,6 +208,17 @@ const Chart = ({
                 }
             });
 
+            Object.entries(ichimokuSeriesRef.current).forEach(([id, seriesArr]) => {
+                const [tenkan, kijun, spanA, spanB, chikou] = seriesArr;
+                results.ichimoku[id] = {
+                    tenkan: param.seriesData.get(tenkan)?.value ?? null,
+                    kijun: param.seriesData.get(kijun)?.value ?? null,
+                    spanA: param.seriesData.get(spanA)?.value ?? null,
+                    spanB: param.seriesData.get(spanB)?.value ?? null,
+                    chikou: param.seriesData.get(chikou)?.value ?? null
+                };
+            });
+
             onCrosshairMoveRef.current(results);
         };
         chart.subscribeCrosshairMove(crosshairHandler);
@@ -232,6 +248,7 @@ const Chart = ({
             stochSeriesRef.current = {};
             supertrendSeriesRef.current = {};
             atrSeriesRef.current = {};
+            ichimokuSeriesRef.current = {};
         };
     }, []);
 
@@ -302,6 +319,67 @@ const Chart = ({
             svg.appendChild(rect);
         });
     }, [vpBins, indicators]);
+
+    // Ichimoku Cloud Fill
+    useEffect(() => {
+        if (!chartRef.current || !ichimokuFillRef.current || !ichimokuFillData || !priceSeriesRef.current) return;
+        const svg = ichimokuFillRef.current;
+        while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+        const ind = indicators.find(i => i.type === 'ichimoku' && i.visible);
+        if (!ind) return;
+
+        const { spanA, spanB } = ichimokuFillData;
+        if (spanA.length === 0 || spanB.length === 0) return;
+
+        const ts = chartRef.current.timeScale();
+
+        // Group points into segments where trend is constant to support two-tone cloud
+        let currentSegment = [];
+        let currentTrend = null; // true for A > B, false for A < B
+
+        for (let i = 0; i < spanA.length; i++) {
+            const pA = spanA[i];
+            const pB = spanB.find(b => b.time === pA.time);
+            if (!pB) continue;
+
+            const trend = pA.value >= pB.value;
+            if (currentTrend === null) currentTrend = trend;
+
+            if (trend !== currentTrend) {
+                // Flash current segment
+                drawSegment(currentSegment, currentTrend);
+                currentSegment = [currentSegment[currentSegment.length - 1]]; // Start next segment from last point
+                currentTrend = trend;
+            }
+            currentSegment.push({ time: pA.time, a: pA.value, b: pB.value });
+        }
+        if (currentSegment.length > 1) drawSegment(currentSegment, currentTrend);
+
+        function drawSegment(seg, trend) {
+            const points = [];
+            // Forward through Span A
+            seg.forEach(p => {
+                const x = ts.timeToCoordinate(p.time);
+                const y = priceSeriesRef.current.priceToCoordinate(p.a);
+                if (x !== null && y !== null) points.push(`${x},${y}`);
+            });
+            // Backward through Span B
+            for (let i = seg.length - 1; i >= 0; i--) {
+                const p = seg[i];
+                const x = ts.timeToCoordinate(p.time);
+                const y = priceSeriesRef.current.priceToCoordinate(p.b);
+                if (x !== null && y !== null) points.push(`${x},${y}`);
+            }
+
+            if (points.length > 2) {
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                poly.setAttribute('points', points.join(' '));
+                poly.setAttribute('fill', trend ? ind.spanAColor : ind.spanBColor);
+                svg.appendChild(poly);
+            }
+        }
+    }, [ichimokuFillData, indicators, data]);
 
     // Reset FirstLoad tracking on Symbol or Interval change
     useEffect(() => {
@@ -399,7 +477,7 @@ const Chart = ({
 
         // Indicator Management
         const currentIds = new Set(indicators.map(ind => ind.id));
-        [smaSeriesRef, rsiSeriesRef, macdSeriesRef, bbSeriesRef, stochSeriesRef, supertrendSeriesRef, atrSeriesRef].forEach(ref => {
+        [smaSeriesRef, rsiSeriesRef, macdSeriesRef, bbSeriesRef, stochSeriesRef, supertrendSeriesRef, atrSeriesRef, ichimokuSeriesRef].forEach(ref => {
             Object.keys(ref.current).forEach(id => {
                 if (!currentIds.has(id)) {
                     try {
@@ -413,6 +491,7 @@ const Chart = ({
 
         let vpActive = false;
         let bbActive = false;
+        let ichimokuActive = false;
         indicators.forEach(ind => {
             if (ind.type === 'sma' && ind.visible) {
                 const existing = smaSeriesRef.current[ind.id];
@@ -565,9 +644,29 @@ const Chart = ({
                 existing.applyOptions({ color: ind.color });
                 existing.setData(res);
             }
+            if (ind.type === 'ichimoku' && ind.visible) {
+                let existing = ichimokuSeriesRef.current[ind.id];
+                const res = computeIchimoku(data, ind);
+                if (!existing) {
+                    const opts = { lineWidth: 1, crosshairMarkerVisible: false };
+                    existing = [
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.tenkanColor, title: 'Tenkan' }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.kijunColor, title: 'Kijun' }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: 'rgba(38,166,154,0.5)', title: 'Span A' }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: 'rgba(239,83,80,0.5)', title: 'Span B' }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.chikouColor, title: 'Chikou' })
+                    ];
+                    ichimokuSeriesRef.current[ind.id] = existing;
+                }
+                const [t, k, sa, sb, c] = existing;
+                t.setData(res.tenkan); k.setData(res.kijun); sa.setData(res.spanA); sb.setData(res.spanB); c.setData(res.chikou);
+                setIchimokuFillData({ spanA: res.spanA, spanB: res.spanB });
+                ichimokuActive = true;
+            }
         });
         if (!vpActive) setVpBins([]);
         if (!bbActive) setBbFillData(null);
+        if (!ichimokuActive) setIchimokuFillData(null);
 
         if (isFirstLoad.current && data.length > 0) {
             const timeScale = chartRef.current.timeScale();
@@ -583,6 +682,7 @@ const Chart = ({
             <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
             {/* Overlay SVGs for Background Shades and Volume Profiles */}
             <svg ref={bbFillRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0, opacity: 0.8 }} />
+            <svg ref={ichimokuFillRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0, opacity: 0.8 }} />
             <svg ref={vpRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }} />
         </div>
     );
