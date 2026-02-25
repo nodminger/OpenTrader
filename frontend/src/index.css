@@ -193,6 +193,14 @@ body {
   top: 83%;
 }
 
+.atr-pane-indicators {
+  top: 86%;
+}
+
+.tsi-pane-indicators {
+  top: 89%;
+}
+
 .legend-item {
   display: flex;
   align-items: center;

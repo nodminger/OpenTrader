@@ -198,6 +198,7 @@ function App() {
     if (type === 'supertrend' && indicators.some(i => i.type === 'supertrend')) return;
     if (type === 'atr' && indicators.some(i => i.type === 'atr')) return;
     if (type === 'ichimoku' && indicators.some(i => i.type === 'ichimoku')) return;
+    if (type === 'tsi' && indicators.some(i => i.type === 'tsi')) return;
 
     if (type === 'sma') {
       const slots = DEFAULT_SMA_LENGTHS.map((length, i) => ({
@@ -322,6 +323,19 @@ function App() {
         spanAColor: 'rgba(38, 166, 154, 0.4)',
         spanBColor: 'rgba(239, 83, 80, 0.4)',
         chikouColor: '#9c27b0',
+      }]);
+    }
+
+    if (type === 'tsi') {
+      setIndicators(prev => [...prev, {
+        id: 'tsi-main',
+        type: 'tsi',
+        longLength: 25,
+        shortLength: 13,
+        signalLength: 13,
+        visible: true,
+        color: '#2962ff',
+        signalColor: '#ff9800',
       }]);
     }
   };
@@ -495,6 +509,30 @@ function App() {
           </div>
         )}
 
+        {/* TSI LEGEND */}
+        {indicators.find(i => i.type === 'tsi' && i.visible) && (
+          <div className="chart-legend-indicators tsi-pane-indicators">
+            {indicators.filter(i => i.type === 'tsi' && i.visible).map(ind => (
+              <React.Fragment key={ind.id}>
+                <div className="legend-item">
+                  <span className="legend-bullet" style={{ backgroundColor: ind.color }}></span>
+                  <span className="legend-label">TSI ({ind.longLength}, {ind.shortLength})</span>
+                  <span className="legend-value" style={{ color: ind.color }}>
+                    {hoveredData?.tsi?.[ind.id]?.tsi?.toFixed(2) || ''}
+                  </span>
+                </div>
+                <div className="legend-item">
+                  <span className="legend-bullet" style={{ backgroundColor: ind.signalColor }}></span>
+                  <span className="legend-label">Signal ({ind.signalLength})</span>
+                  <span className="legend-value" style={{ color: ind.signalColor }}>
+                    {hoveredData?.tsi?.[ind.id]?.signal?.toFixed(2) || ''}
+                  </span>
+                </div>
+              </React.Fragment>
+            ))}
+          </div>
+        )}
+
         {/* MACD LEGEND */}
         {indicators.find(i => i.type === 'macd' && i.visible) && (
           <div className="chart-legend-indicators macd-pane-indicators">
@@ -655,6 +693,16 @@ function App() {
             title="Ichimoku Cloud"
             groupType="ichimoku"
             indicators={indicators.filter(i => i.type === 'ichimoku')}
+            updateIndicator={updateIndicator}
+            removeIndicator={removeIndicator}
+            removeIndicatorGroup={removeIndicatorGroup}
+            toggleIndicator={toggleIndicator}
+          />
+          {/* TSI Panel */}
+          <IndicatorPanel
+            title="TSI"
+            groupType="tsi"
+            indicators={indicators.filter(i => i.type === 'tsi')}
             updateIndicator={updateIndicator}
             removeIndicator={removeIndicator}
             removeIndicatorGroup={removeIndicatorGroup}

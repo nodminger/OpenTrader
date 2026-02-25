@@ -14,6 +14,7 @@ const IndicatorSearch = ({ onAddIndicator, onClose }) => {
         { id: 'supertrend', name: 'Super Trend' },
         { id: 'atr', name: 'Average True Range' },
         { id: 'ichimoku', name: 'Ichimoku Cloud' },
+        { id: 'tsi', name: 'True Strength Index' },
     ];
 
     const filtered = indicators.filter(ind =>

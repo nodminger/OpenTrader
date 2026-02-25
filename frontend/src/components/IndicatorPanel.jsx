@@ -33,7 +33,8 @@ const IndicatorGroupPanel = ({
                                         groupType === 'supertrend' ? '📊 SUPERTREND' :
                                             groupType === 'atr' ? '📊 ATR' :
                                                 groupType === 'ichimoku' ? '📊 ICHIMOKU' :
-                                                    groupType === 'volume_profile' ? '📊 VP' : '📈 SMA'}
+                                                    groupType === 'tsi' ? '📊 TSI' :
+                                                        groupType === 'volume_profile' ? '📊 VP' : '📈 SMA'}
                     </span>
                 </div>
             </div>
@@ -79,7 +80,8 @@ const IndicatorGroupPanel = ({
                                                         groupType === 'stoch' ? `Stoch (${ind.length}, ${ind.dLength})` :
                                                             groupType === 'supertrend' ? `Supertrend (${ind.atrLength}, ${ind.factor})` :
                                                                 groupType === 'atr' ? `ATR (${ind.length})` :
-                                                                    groupType === 'ichimoku' ? `Ichimoku Cloud` : 'Indicator'}
+                                                                    groupType === 'ichimoku' ? `Ichimoku Cloud` :
+                                                                        groupType === 'tsi' ? `TSI (${ind.longLength}, ${ind.shortLength}, ${ind.signalLength})` : 'Indicator'}
                                 </label>
                             </div>
                             <div className="indicator-actions">
@@ -380,6 +382,32 @@ const IndicatorGroupPanel = ({
                                     <input
                                         type="number" min="1" max="500" value={ind.laggingLength}
                                         onChange={(e) => updateIndicator(ind.id, { laggingLength: Math.max(1, parseInt(e.target.value) || 1) })}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        {/* TSI Settings */}
+                        {groupType === 'tsi' && (
+                            <div className="indicator-settings rsi-grid">
+                                <div className="setting-item">
+                                    <label>Long Len</label>
+                                    <input
+                                        type="number" min="1" max="500" value={ind.longLength}
+                                        onChange={(e) => updateIndicator(ind.id, { longLength: Math.max(1, parseInt(e.target.value) || 1) })}
+                                    />
+                                </div>
+                                <div className="setting-item">
+                                    <label>Short Len</label>
+                                    <input
+                                        type="number" min="1" max="500" value={ind.shortLength}
+                                        onChange={(e) => updateIndicator(ind.id, { shortLength: Math.max(1, parseInt(e.target.value) || 1) })}
+                                    />
+                                </div>
+                                <div className="setting-item">
+                                    <label>Signal</label>
+                                    <input
+                                        type="number" min="1" max="500" value={ind.signalLength}
+                                        onChange={(e) => updateIndicator(ind.id, { signalLength: Math.max(1, parseInt(e.target.value) || 1) })}
                                     />
                                 </div>
                             </div>

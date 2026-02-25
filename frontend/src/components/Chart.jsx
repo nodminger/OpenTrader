@@ -15,6 +15,7 @@ import { computeStochastic } from '../Indicators/stoch';
 import { computeSuperTrend } from '../Indicators/supertrend';
 import { computeATR } from '../Indicators/atr';
 import { computeIchimoku } from '../Indicators/ichimoku';
+import { computeTSI } from '../Indicators/tsi';
 
 // Compute Heikin-Ashi candles from OHLCV data
 function computeHeikinAshi(data) {
@@ -53,6 +54,7 @@ const Chart = ({
     const supertrendSeriesRef = useRef({});
     const atrSeriesRef = useRef({});
     const ichimokuSeriesRef = useRef({});
+    const tsiSeriesRef = useRef({});
     const vpRef = useRef(null);
     const bbFillRef = useRef(null);
     const ichimokuFillRef = useRef(null);
@@ -124,6 +126,7 @@ const Chart = ({
                 supertrend: {},
                 atrs: {},
                 ichimoku: {},
+                tsi: {},
             };
 
             Object.entries(smaSeriesRef.current).forEach(([id, series]) => {
@@ -219,6 +222,14 @@ const Chart = ({
                 };
             });
 
+            Object.entries(tsiSeriesRef.current).forEach(([id, seriesArr]) => {
+                const [tsi, signal] = seriesArr;
+                results.tsi[id] = {
+                    tsi: param.seriesData.get(tsi)?.value ?? null,
+                    signal: param.seriesData.get(signal)?.value ?? null
+                };
+            });
+
             onCrosshairMoveRef.current(results);
         };
         chart.subscribeCrosshairMove(crosshairHandler);
@@ -249,6 +260,7 @@ const Chart = ({
             supertrendSeriesRef.current = {};
             atrSeriesRef.current = {};
             ichimokuSeriesRef.current = {};
+            tsiSeriesRef.current = {};
         };
     }, []);
 
@@ -415,7 +427,8 @@ const Chart = ({
             rsi: { top: 0.80, bottom: 0.02 },
             macd: { top: 0.80, bottom: 0.02 },
             stoch: { top: 0.80, bottom: 0.02 },
-            atr: { top: 0.80, bottom: 0.02 }
+            atr: { top: 0.80, bottom: 0.02 },
+            tsi: { top: 0.80, bottom: 0.02 }
         };
 
         if (oscillatorCount === 1) {
@@ -440,6 +453,14 @@ const Chart = ({
             marginsMap[activePanes[1]] = { top: 0.52, bottom: 0.32 };
             marginsMap[activePanes[2]] = { top: 0.68, bottom: 0.16 };
             marginsMap[activePanes[3]] = { top: 0.84, bottom: 0.02 };
+        } else if (oscillatorCount === 5) {
+            priceBottom = 0.78;
+            volTop = 0.25; volBottom = 0.70;
+            marginsMap[activePanes[0]] = { top: 0.35, bottom: 0.52 };
+            marginsMap[activePanes[1]] = { top: 0.48, bottom: 0.39 };
+            marginsMap[activePanes[2]] = { top: 0.61, bottom: 0.26 };
+            marginsMap[activePanes[3]] = { top: 0.74, bottom: 0.13 };
+            marginsMap[activePanes[4]] = { top: 0.87, bottom: 0.01 };
         }
 
         chartRef.current.priceScale('right').applyOptions({ scaleMargins: { top: 0.02, bottom: priceBottom } });
@@ -477,7 +498,7 @@ const Chart = ({
 
         // Indicator Management
         const currentIds = new Set(indicators.map(ind => ind.id));
-        [smaSeriesRef, rsiSeriesRef, macdSeriesRef, bbSeriesRef, stochSeriesRef, supertrendSeriesRef, atrSeriesRef, ichimokuSeriesRef].forEach(ref => {
+        [smaSeriesRef, rsiSeriesRef, macdSeriesRef, bbSeriesRef, stochSeriesRef, supertrendSeriesRef, atrSeriesRef, ichimokuSeriesRef, tsiSeriesRef].forEach(ref => {
             Object.keys(ref.current).forEach(id => {
                 if (!currentIds.has(id)) {
                     try {
@@ -643,6 +664,29 @@ const Chart = ({
                 chartRef.current.priceScale('atr').applyOptions({ scaleMargins: marginsMap.atr });
                 existing.applyOptions({ color: ind.color });
                 existing.setData(res);
+            }
+            if (ind.type === 'tsi' && ind.visible) {
+                let existing = tsiSeriesRef.current[ind.id];
+                const res = computeTSI(data, ind);
+                if (!existing) {
+                    const opts = { priceScaleId: 'tsi', lineWidth: 1.5, crosshairMarkerVisible: false };
+                    existing = [
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.color || '#2962ff' }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: ind.signalColor || '#ff9800', lineWidth: 1.2 }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: 'rgba(255,255,255,0.1)' }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: 'rgba(255,255,255,0.05)', lineStyle: 2 }),
+                        chartRef.current.addSeries(LineSeries, { ...opts, color: 'rgba(255,255,255,0.05)', lineStyle: 2 })
+                    ];
+                    tsiSeriesRef.current[ind.id] = existing;
+                }
+                chartRef.current.priceScale('tsi').applyOptions({ scaleMargins: marginsMap.tsi });
+                const [tsi, sig, b0, b25, bN25] = existing;
+                const times = data.map(d => ({ time: d.time }));
+                b0.setData(times.map(t => ({ ...t, value: 0 })));
+                b25.setData(times.map(t => ({ ...t, value: 25 })));
+                bN25.setData(times.map(t => ({ ...t, value: -25 })));
+                tsi.setData(res.tsi);
+                sig.setData(res.signal);
             }
             if (ind.type === 'ichimoku' && ind.visible) {
                 let existing = ichimokuSeriesRef.current[ind.id];
