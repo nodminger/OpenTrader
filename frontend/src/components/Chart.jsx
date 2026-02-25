@@ -13,6 +13,7 @@ import { computeVolumeProfile } from '../Indicators/volumeProfile';
 import { computeBollingerBands } from '../Indicators/bollinger';
 import { computeStochastic } from '../Indicators/stoch';
 import { computeSuperTrend } from '../Indicators/supertrend';
+import { computeATR } from '../Indicators/atr';
 
 // Compute Heikin-Ashi candles from OHLCV data
 function computeHeikinAshi(data) {
@@ -49,6 +50,7 @@ const Chart = ({
     const bbSeriesRef = useRef({});
     const stochSeriesRef = useRef({});
     const supertrendSeriesRef = useRef({});
+    const atrSeriesRef = useRef({});
     const vpRef = useRef(null);
     const bbFillRef = useRef(null);
     const [vpBins, setVpBins] = useState([]);
@@ -116,6 +118,7 @@ const Chart = ({
                 bbs: {},
                 stochs: {},
                 supertrend: {},
+                atrs: {},
             };
 
             Object.entries(smaSeriesRef.current).forEach(([id, series]) => {
@@ -193,6 +196,13 @@ const Chart = ({
                 }
             });
 
+            Object.entries(atrSeriesRef.current || {}).forEach(([id, series]) => {
+                const val = param.seriesData.get(series);
+                if (val) {
+                    results.atrs[id] = { value: val.value };
+                }
+            });
+
             onCrosshairMoveRef.current(results);
         };
         chart.subscribeCrosshairMove(crosshairHandler);
@@ -221,6 +231,7 @@ const Chart = ({
             bbSeriesRef.current = {};
             stochSeriesRef.current = {};
             supertrendSeriesRef.current = {};
+            atrSeriesRef.current = {};
         };
     }, []);
 
@@ -308,11 +319,13 @@ const Chart = ({
         const hasRsi = indicators.some(i => i.type === 'rsi' && i.visible);
         const hasMacd = indicators.some(i => i.type === 'macd' && i.visible);
         const hasStoch = indicators.some(i => i.type === 'stoch' && i.visible);
+        const hasAtr = indicators.some(i => i.type === 'atr' && i.visible);
 
         const activePanes = [];
         if (hasRsi) activePanes.push('rsi');
         if (hasStoch) activePanes.push('stoch');
         if (hasMacd) activePanes.push('macd');
+        if (hasAtr) activePanes.push('atr');
 
         const oscillatorCount = activePanes.length;
 
@@ -323,7 +336,8 @@ const Chart = ({
         const marginsMap = {
             rsi: { top: 0.80, bottom: 0.02 },
             macd: { top: 0.80, bottom: 0.02 },
-            stoch: { top: 0.80, bottom: 0.02 }
+            stoch: { top: 0.80, bottom: 0.02 },
+            atr: { top: 0.80, bottom: 0.02 }
         };
 
         if (oscillatorCount === 1) {
@@ -341,6 +355,13 @@ const Chart = ({
             marginsMap[activePanes[0]] = { top: 0.42, bottom: 0.40 };
             marginsMap[activePanes[1]] = { top: 0.62, bottom: 0.20 };
             marginsMap[activePanes[2]] = { top: 0.82, bottom: 0.02 };
+        } else if (oscillatorCount === 4) {
+            priceBottom = 0.72;
+            volTop = 0.30; volBottom = 0.65;
+            marginsMap[activePanes[0]] = { top: 0.36, bottom: 0.48 };
+            marginsMap[activePanes[1]] = { top: 0.52, bottom: 0.32 };
+            marginsMap[activePanes[2]] = { top: 0.68, bottom: 0.16 };
+            marginsMap[activePanes[3]] = { top: 0.84, bottom: 0.02 };
         }
 
         chartRef.current.priceScale('right').applyOptions({ scaleMargins: { top: 0.02, bottom: priceBottom } });
@@ -378,7 +399,7 @@ const Chart = ({
 
         // Indicator Management
         const currentIds = new Set(indicators.map(ind => ind.id));
-        [smaSeriesRef, rsiSeriesRef, macdSeriesRef, bbSeriesRef, stochSeriesRef, supertrendSeriesRef].forEach(ref => {
+        [smaSeriesRef, rsiSeriesRef, macdSeriesRef, bbSeriesRef, stochSeriesRef, supertrendSeriesRef, atrSeriesRef].forEach(ref => {
             Object.keys(ref.current).forEach(id => {
                 if (!currentIds.has(id)) {
                     try {
@@ -527,6 +548,22 @@ const Chart = ({
 
                 upSeries.setData(upData);
                 downSeries.setData(downData);
+            }
+            if (ind.type === 'atr' && ind.visible) {
+                let existing = atrSeriesRef.current[ind.id];
+                const res = computeATR(data, ind);
+                if (!existing) {
+                    existing = chartRef.current.addSeries(LineSeries, {
+                        priceScaleId: 'atr',
+                        color: ind.color || '#ff5252',
+                        lineWidth: 1.5,
+                        crosshairMarkerVisible: false,
+                    });
+                    atrSeriesRef.current[ind.id] = existing;
+                }
+                chartRef.current.priceScale('atr').applyOptions({ scaleMargins: marginsMap.atr });
+                existing.applyOptions({ color: ind.color });
+                existing.setData(res);
             }
         });
         if (!vpActive) setVpBins([]);

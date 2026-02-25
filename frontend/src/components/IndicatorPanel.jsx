@@ -31,7 +31,8 @@ const IndicatorGroupPanel = ({
                                 groupType === 'bb' ? '📊 BB' :
                                     groupType === 'stoch' ? '📊 STOCH' :
                                         groupType === 'supertrend' ? '📊 SUPERTREND' :
-                                            groupType === 'volume_profile' ? '📊 VP' : '📈 SMA'}
+                                            groupType === 'atr' ? '📊 ATR' :
+                                                groupType === 'volume_profile' ? '📊 VP' : '📈 SMA'}
                     </span>
                 </div>
             </div>
@@ -75,7 +76,8 @@ const IndicatorGroupPanel = ({
                                                 groupType === 'volume_profile' ? `Volume Profile (${ind.priceBins})` :
                                                     groupType === 'bb' ? `BB (${ind.length}, ${ind.stdDev})` :
                                                         groupType === 'stoch' ? `Stoch (${ind.length}, ${ind.dLength})` :
-                                                            groupType === 'supertrend' ? `Supertrend (${ind.atrLength}, ${ind.factor})` : 'Indicator'}
+                                                            groupType === 'supertrend' ? `Supertrend (${ind.atrLength}, ${ind.factor})` :
+                                                                groupType === 'atr' ? `ATR (${ind.length})` : 'Indicator'}
                                 </label>
                             </div>
                             <div className="indicator-actions">
@@ -331,6 +333,18 @@ const IndicatorGroupPanel = ({
                                     <input
                                         type="number" step="0.1" min="0.1" max="20" value={ind.factor}
                                         onChange={(e) => updateIndicator(ind.id, { factor: Math.max(0.1, parseFloat(e.target.value) || 0.1) })}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        {/* ATR Settings */}
+                        {groupType === 'atr' && (
+                            <div className="indicator-settings rsi-grid">
+                                <div className="setting-item">
+                                    <label>Length</label>
+                                    <input
+                                        type="number" min="1" max="500" value={ind.length}
+                                        onChange={(e) => updateIndicator(ind.id, { length: Math.max(1, parseInt(e.target.value) || 1) })}
                                     />
                                 </div>
                             </div>

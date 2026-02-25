@@ -196,6 +196,7 @@ function App() {
     if (type === 'bb' && indicators.some(i => i.type === 'bb')) return;
     if (type === 'stoch' && indicators.some(i => i.type === 'stoch')) return;
     if (type === 'supertrend' && indicators.some(i => i.type === 'supertrend')) return;
+    if (type === 'atr' && indicators.some(i => i.type === 'atr')) return;
 
     if (type === 'sma') {
       const slots = DEFAULT_SMA_LENGTHS.map((length, i) => ({
@@ -303,6 +304,16 @@ function App() {
         visible: true,
         upColor: '#26a69a',
         downColor: '#ef5350',
+      }]);
+    }
+
+    if (type === 'atr') {
+      setIndicators(prev => [...prev, {
+        id: 'atr-main',
+        type: 'atr',
+        length: 14,
+        visible: true,
+        color: '#ff5252',
       }]);
     }
   };
@@ -504,6 +515,20 @@ function App() {
             </div>
           </div>
         )}
+        {/* ATR LEGEND */}
+        {indicators.find(i => i.type === 'atr' && i.visible) && (
+          <div className="chart-legend-indicators atr-pane-indicators">
+            {indicators.filter(i => i.type === 'atr' && i.visible).map(ind => (
+              <div key={ind.id} className="legend-item">
+                <span className="legend-bullet" style={{ backgroundColor: ind.color }}></span>
+                <span className="legend-label">ATR ({ind.length})</span>
+                <span className="legend-value" style={{ color: ind.color }}>
+                  {hoveredData?.atrs?.[ind.id]?.value?.toFixed(2) || ''}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
 
         {showIndicatorSearch && (
           <IndicatorSearch
@@ -585,6 +610,16 @@ function App() {
             title="SuperTrend"
             groupType="supertrend"
             indicators={indicators.filter(i => i.type === 'supertrend')}
+            updateIndicator={updateIndicator}
+            removeIndicator={removeIndicator}
+            removeIndicatorGroup={removeIndicatorGroup}
+            toggleIndicator={toggleIndicator}
+          />
+          {/* ATR Panel */}
+          <IndicatorPanel
+            title="Average True Range"
+            groupType="atr"
+            indicators={indicators.filter(i => i.type === 'atr')}
             updateIndicator={updateIndicator}
             removeIndicator={removeIndicator}
             removeIndicatorGroup={removeIndicatorGroup}

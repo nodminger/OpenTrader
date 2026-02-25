@@ -12,6 +12,7 @@ const IndicatorSearch = ({ onAddIndicator, onClose }) => {
         { id: 'bb', name: 'Bollinger Bands' },
         { id: 'stoch', name: 'Stochastic Oscillator' },
         { id: 'supertrend', name: 'Super Trend' },
+        { id: 'atr', name: 'Average True Range' },
     ];
 
     const filtered = indicators.filter(ind =>
