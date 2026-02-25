@@ -497,10 +497,10 @@ const Chart = ({
         priceSeriesRef.current.setData(priceData);
 
         // Indicator Management
-        const currentIds = new Set(indicators.map(ind => ind.id));
+        const visibleIds = new Set(indicators.filter(ind => ind.visible).map(ind => ind.id));
         [smaSeriesRef, rsiSeriesRef, macdSeriesRef, bbSeriesRef, stochSeriesRef, supertrendSeriesRef, atrSeriesRef, ichimokuSeriesRef, tsiSeriesRef].forEach(ref => {
             Object.keys(ref.current).forEach(id => {
-                if (!currentIds.has(id)) {
+                if (!visibleIds.has(id)) {
                     try {
                         if (Array.isArray(ref.current[id])) ref.current[id].forEach(s => chartRef.current.removeSeries(s));
                         else chartRef.current.removeSeries(ref.current[id]);
