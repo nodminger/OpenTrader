@@ -11,6 +11,7 @@ const IndicatorSearch = ({ onAddIndicator, onClose }) => {
         { id: 'volume_profile', name: 'Volume Profile / HD' },
         { id: 'bb', name: 'Bollinger Bands' },
         { id: 'stoch', name: 'Stochastic Oscillator' },
+        { id: 'supertrend', name: 'Super Trend' },
     ];
 
     const filtered = indicators.filter(ind =>

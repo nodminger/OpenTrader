@@ -195,6 +195,7 @@ function App() {
     if (type === 'volume_profile' && indicators.some(i => i.type === 'volume_profile')) return;
     if (type === 'bb' && indicators.some(i => i.type === 'bb')) return;
     if (type === 'stoch' && indicators.some(i => i.type === 'stoch')) return;
+    if (type === 'supertrend' && indicators.some(i => i.type === 'supertrend')) return;
 
     if (type === 'sma') {
       const slots = DEFAULT_SMA_LENGTHS.map((length, i) => ({
@@ -292,6 +293,18 @@ function App() {
         precision: 2,
       }]);
     }
+
+    if (type === 'supertrend') {
+      setIndicators(prev => [...prev, {
+        id: 'supertrend-main',
+        type: 'supertrend',
+        atrLength: 10,
+        factor: 3,
+        visible: true,
+        upColor: '#26a69a',
+        downColor: '#ef5350',
+      }]);
+    }
   };
 
   const updateIndicator = (id, updates) => {
@@ -375,6 +388,23 @@ function App() {
                 <span className="legend-bullet" style={{ backgroundColor: ind.color }}></span>
                 <span className="legend-label">SMA {ind.length}{ind.source !== 'close' && <span className="legend-source">({ind.source})</span>}</span>
                 <span className="legend-value" style={{ color: ind.color }}>{val != null ? val.toFixed(2) : ''}</span>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* SUPERTREND LEGEND */}
+        <div className="chart-legend-indicators price-indicators">
+          {indicators.filter(i => i.type === 'supertrend' && i.visible).map(ind => {
+            const data = hoveredData?.supertrend?.[ind.id];
+            const color = data?.trend === 1 ? ind.upColor : ind.downColor;
+            return (
+              <div key={ind.id} className="legend-item">
+                <span className="legend-bullet" style={{ backgroundColor: color }}></span>
+                <span className="legend-label">SuperTrend ({ind.atrLength}, {ind.factor})</span>
+                <span className="legend-value" style={{ color: color }}>
+                  {data?.value?.toFixed(2) || ''}
+                </span>
               </div>
             );
           })}
@@ -545,6 +575,16 @@ function App() {
             title="Stochastic Oscillator"
             groupType="stoch"
             indicators={indicators.filter(i => i.type === 'stoch')}
+            updateIndicator={updateIndicator}
+            removeIndicator={removeIndicator}
+            removeIndicatorGroup={removeIndicatorGroup}
+            toggleIndicator={toggleIndicator}
+          />
+          {/* SuperTrend Panel */}
+          <IndicatorPanel
+            title="SuperTrend"
+            groupType="supertrend"
+            indicators={indicators.filter(i => i.type === 'supertrend')}
             updateIndicator={updateIndicator}
             removeIndicator={removeIndicator}
             removeIndicatorGroup={removeIndicatorGroup}

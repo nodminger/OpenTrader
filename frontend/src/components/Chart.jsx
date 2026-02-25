@@ -12,6 +12,7 @@ import { computeMACD } from '../Indicators/macd';
 import { computeVolumeProfile } from '../Indicators/volumeProfile';
 import { computeBollingerBands } from '../Indicators/bollinger';
 import { computeStochastic } from '../Indicators/stoch';
+import { computeSuperTrend } from '../Indicators/supertrend';
 
 // Compute Heikin-Ashi candles from OHLCV data
 function computeHeikinAshi(data) {
@@ -47,6 +48,7 @@ const Chart = ({
     const macdSeriesRef = useRef({});
     const bbSeriesRef = useRef({});
     const stochSeriesRef = useRef({});
+    const supertrendSeriesRef = useRef({});
     const vpRef = useRef(null);
     const bbFillRef = useRef(null);
     const [vpBins, setVpBins] = useState([]);
@@ -113,6 +115,7 @@ const Chart = ({
                 macds: {},
                 bbs: {},
                 stochs: {},
+                supertrend: {},
             };
 
             Object.entries(smaSeriesRef.current).forEach(([id, series]) => {
@@ -178,6 +181,18 @@ const Chart = ({
                 }
             });
 
+            Object.entries(supertrendSeriesRef.current || {}).forEach(([id, seriesArr]) => {
+                const [upS, downS] = seriesArr;
+                const upVal = param.seriesData.get(upS);
+                const downVal = param.seriesData.get(downS);
+
+                if (upVal) {
+                    results.supertrend[id] = { value: upVal.value, trend: 1 };
+                } else if (downVal) {
+                    results.supertrend[id] = { value: downVal.value, trend: -1 };
+                }
+            });
+
             onCrosshairMoveRef.current(results);
         };
         chart.subscribeCrosshairMove(crosshairHandler);
@@ -205,6 +220,7 @@ const Chart = ({
             macdSeriesRef.current = {};
             bbSeriesRef.current = {};
             stochSeriesRef.current = {};
+            supertrendSeriesRef.current = {};
         };
     }, []);
 
@@ -362,7 +378,7 @@ const Chart = ({
 
         // Indicator Management
         const currentIds = new Set(indicators.map(ind => ind.id));
-        [smaSeriesRef, rsiSeriesRef, macdSeriesRef, bbSeriesRef].forEach(ref => {
+        [smaSeriesRef, rsiSeriesRef, macdSeriesRef, bbSeriesRef, stochSeriesRef, supertrendSeriesRef].forEach(ref => {
             Object.keys(ref.current).forEach(id => {
                 if (!currentIds.has(id)) {
                     try {
@@ -472,6 +488,45 @@ const Chart = ({
                 lower.setData(times.map(t => ({ ...t, value: ind.lowerLine || 20 })));
                 k.setData(res.k);
                 d.setData(res.d);
+            }
+            if (ind.type === 'supertrend' && ind.visible) {
+                let existing = supertrendSeriesRef.current[ind.id];
+                const res = computeSuperTrend(data, ind);
+                if (!existing) {
+                    const upS = chartRef.current.addSeries(LineSeries, {
+                        lineWidth: 2,
+                        color: ind.upColor || '#26a69a',
+                        crosshairMarkerVisible: false,
+                        lastValueVisible: false,
+                        priceLineVisible: false,
+                    });
+                    const downS = chartRef.current.addSeries(LineSeries, {
+                        lineWidth: 2,
+                        color: ind.downColor || '#ef5350',
+                        crosshairMarkerVisible: false,
+                        lastValueVisible: false,
+                        priceLineVisible: false,
+                    });
+                    existing = [upS, downS];
+                    supertrendSeriesRef.current[ind.id] = existing;
+                }
+
+                const [upSeries, downSeries] = existing;
+                upSeries.applyOptions({ color: ind.upColor });
+                downSeries.applyOptions({ color: ind.downColor });
+
+                const upData = res.map(d => ({
+                    time: d.time,
+                    value: d.trend === 1 ? d.value : null
+                })).filter(d => d.value !== null);
+
+                const downData = res.map(d => ({
+                    time: d.time,
+                    value: d.trend === -1 ? d.value : null
+                })).filter(d => d.value !== null);
+
+                upSeries.setData(upData);
+                downSeries.setData(downData);
             }
         });
         if (!vpActive) setVpBins([]);

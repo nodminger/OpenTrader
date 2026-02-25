@@ -30,7 +30,8 @@ const IndicatorGroupPanel = ({
                             groupType === 'macd' ? '📊 MACD' :
                                 groupType === 'bb' ? '📊 BB' :
                                     groupType === 'stoch' ? '📊 STOCH' :
-                                        groupType === 'volume_profile' ? '📊 VP' : '📈 SMA'}
+                                        groupType === 'supertrend' ? '📊 SUPERTREND' :
+                                            groupType === 'volume_profile' ? '📊 VP' : '📈 SMA'}
                     </span>
                 </div>
             </div>
@@ -73,7 +74,8 @@ const IndicatorGroupPanel = ({
                                             groupType === 'macd' ? 'Normalized MACD' :
                                                 groupType === 'volume_profile' ? `Volume Profile (${ind.priceBins})` :
                                                     groupType === 'bb' ? `BB (${ind.length}, ${ind.stdDev})` :
-                                                        groupType === 'stoch' ? `Stoch (${ind.length}, ${ind.dLength})` : 'Indicator'}
+                                                        groupType === 'stoch' ? `Stoch (${ind.length}, ${ind.dLength})` :
+                                                            groupType === 'supertrend' ? `Supertrend (${ind.atrLength}, ${ind.factor})` : 'Indicator'}
                                 </label>
                             </div>
                             <div className="indicator-actions">
@@ -310,6 +312,25 @@ const IndicatorGroupPanel = ({
                                     <input
                                         type="number" min="1" max="100" value={ind.lowerLine}
                                         onChange={(e) => updateIndicator(ind.id, { lowerLine: parseInt(e.target.value) || 0 })}
+                                    />
+                                </div>
+                            </div>
+                        )}
+                        {/* SuperTrend Settings */}
+                        {groupType === 'supertrend' && (
+                            <div className="indicator-settings rsi-grid">
+                                <div className="setting-item">
+                                    <label>ATR Length</label>
+                                    <input
+                                        type="number" min="1" max="500" value={ind.atrLength}
+                                        onChange={(e) => updateIndicator(ind.id, { atrLength: Math.max(1, parseInt(e.target.value) || 1) })}
+                                    />
+                                </div>
+                                <div className="setting-item">
+                                    <label>Factor</label>
+                                    <input
+                                        type="number" step="0.1" min="0.1" max="20" value={ind.factor}
+                                        onChange={(e) => updateIndicator(ind.id, { factor: Math.max(0.1, parseFloat(e.target.value) || 0.1) })}
                                     />
                                 </div>
                             </div>
