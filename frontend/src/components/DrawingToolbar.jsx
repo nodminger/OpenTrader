@@ -97,6 +97,19 @@ const DrawingToolbar = ({ activeTool, onSelectTool }) => {
             ]
         },
         {
+            id: 'pitchfork_cat',
+            type: 'group',
+            label: 'Pitchfork & Advanced',
+            icon: 'ψ',
+            tools: [
+                { id: 'pitchfork', icon: 'ψ', label: 'Pitchfork' },
+                { id: 'schiffPitchfork', icon: '⚔', label: 'Schiff Pitchfork' },
+                { id: 'modifiedSchiffPitchfork', icon: '⚔', label: 'Modified Schiff Pitchfork' },
+                { id: 'insidePitchfork', icon: '⩰', label: 'Inside Pitchfork' },
+                { id: 'regressionChannel', icon: '📈', label: 'Regression Channel' },
+            ]
+        },
+        {
             id: 'fib_cat',
             type: 'group',
             label: 'Gann & Fibonacci',

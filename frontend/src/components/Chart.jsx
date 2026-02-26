@@ -389,6 +389,11 @@ const Chart = ({
                 channelPattern: 3,
                 doubleTop: 5,
                 doubleBottom: 5,
+                pitchfork: 3,
+                schiffPitchfork: 3,
+                modifiedSchiffPitchfork: 3,
+                insidePitchfork: 3,
+                regressionChannel: 3,
                 longPosition: 2,
                 shortPosition: 2,
                 forecast: 2,
@@ -739,6 +744,92 @@ const Chart = ({
                             svg.appendChild(t);
                         }
                     });
+                }
+            } else if (['pitchfork', 'schiffPitchfork', 'modifiedSchiffPitchfork', 'insidePitchfork'].includes(d.type) && d.points.length >= 2) {
+                const p1 = d.points[0], p2 = d.points[1], p3 = d.points[2] || d.points[1];
+                let px1 = ts.timeToCoordinate(p1.time), py1 = ps.priceToCoordinate(p1.price);
+                const px2 = ts.timeToCoordinate(p2.time), py2 = ps.priceToCoordinate(p2.price);
+                const px3 = ts.timeToCoordinate(p3.time), py3 = ps.priceToCoordinate(p3.price);
+
+                if (px1 !== null && py1 !== null && px2 !== null && py2 !== null && px3 !== null && py3 !== null) {
+                    // Handle Pitchfork variants
+                    if (d.type === 'schiffPitchfork') {
+                        // Median point between P1 and P2 for Schiff
+                        py1 = (py1 + py2) / 2;
+                    } else if (d.type === 'modifiedSchiffPitchfork') {
+                        // Horizontal Projection
+                        px1 = (px1 + px2) / 2;
+                        py1 = (py1 + py2) / 2;
+                    } else if (d.type === 'insidePitchfork') {
+                        // Offset base
+                        const midP2P3y = (py2 + py3) / 2;
+                        py1 = (py1 + midP2P3y) / 2;
+                    }
+
+                    // Handle calculation
+                    const midX = (px2 + px3) / 2;
+                    const midY = (py2 + py3) / 2;
+                    const slope = (midY - py1) / (midX - px1);
+                    const intercept = py1 - slope * px1;
+
+                    // Median Line
+                    const med = line.cloneNode();
+                    med.setAttribute('x1', px1); med.setAttribute('y1', py1);
+                    med.setAttribute('x2', width); med.setAttribute('y2', slope * width + intercept);
+                    svg.appendChild(med);
+
+                    // Upper and Lower Lines
+                    const dy = py3 - midY;
+                    [dy, -dy].forEach(offset => {
+                        const l = line.cloneNode();
+                        l.setAttribute('x1', px2 + (offset === dy ? 0 : px3 - px2));
+                        l.setAttribute('y1', py2 + (offset === dy ? 0 : py3 - py2));
+                        l.setAttribute('x2', width);
+                        l.setAttribute('y2', slope * width + intercept + offset);
+                        svg.appendChild(l);
+                    });
+                }
+            } else if (d.type === 'regressionChannel' && d.points.length >= 2) {
+                const p1 = d.points[0], p2 = d.points[1];
+                const startIdx = data.findIndex(item => item.time === p1.time);
+                const endIdx = data.findIndex(item => item.time === p2.time);
+                if (startIdx !== -1 && endIdx !== -1) {
+                    const subset = data.slice(Math.min(startIdx, endIdx), Math.max(startIdx, endIdx) + 1);
+                    const n = subset.length;
+                    let sumX = 0, sumY = 0, sumXY = 0, sumXX = 0;
+                    subset.forEach((d, i) => {
+                        sumX += i; sumY += d.close; sumXY += i * d.close; sumXX += i * i;
+                    });
+                    const slope = (n * sumXY - sumX * sumY) / (n * sumXX - sumX * sumX);
+                    const intercept = (sumY - slope * sumX) / n;
+
+                    const lx1 = ts.timeToCoordinate(subset[0].time);
+                    const lx2 = ts.timeToCoordinate(subset[n - 1].time);
+                    const ly1 = ps.priceToCoordinate(intercept);
+                    const ly2 = ps.priceToCoordinate(slope * (n - 1) + intercept);
+
+                    if (lx1 !== null && lx2 !== null && ly1 !== null && ly2 !== null) {
+                        const med = line.cloneNode();
+                        med.setAttribute('x1', lx1); med.setAttribute('y1', ly1);
+                        med.setAttribute('x2', lx2); med.setAttribute('y2', ly2);
+                        svg.appendChild(med);
+
+                        // Deviation for channel
+                        let maxDev = 0;
+                        subset.forEach((d, i) => {
+                            const pred = slope * i + intercept;
+                            maxDev = Math.max(maxDev, Math.abs(d.close - pred));
+                        });
+                        const devY = Math.abs(ps.priceToCoordinate(intercept + maxDev) - ly1);
+
+                        [devY, -devY].forEach(off => {
+                            const l = line.cloneNode();
+                            l.setAttribute('x1', lx1); l.setAttribute('y1', ly1 + off);
+                            l.setAttribute('x2', lx2); l.setAttribute('y2', ly2 + off);
+                            l.setAttribute('opacity', '0.4');
+                            svg.appendChild(l);
+                        });
+                    }
                 }
             } else if (d.type === 'trend' && x2 !== null && y2 !== null) {
                 line.setAttribute('x1', x1);
