@@ -394,8 +394,12 @@ const Chart = ({
                 modifiedSchiffPitchfork: 3,
                 insidePitchfork: 3,
                 regressionChannel: 3,
+                buyLabel: 1,
+                sellLabel: 1,
+                arrowMark: 1,
                 longPosition: 2,
                 shortPosition: 2,
+                riskReward: 2,
                 forecast: 2,
                 priceRange: 2,
                 dateRange: 2,
@@ -1153,6 +1157,61 @@ const Chart = ({
                 ghost.setAttribute('stroke-dasharray', '2,4');
                 ghost.setAttribute('opacity', '0.5');
                 svg.appendChild(ghost);
+            } else if (d.type === 'buyLabel' && x1 !== null && y1 !== null) {
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', x1 - 20); rect.setAttribute('y', y1 + 10);
+                rect.setAttribute('width', 40); rect.setAttribute('height', 20);
+                rect.setAttribute('fill', '#089981'); rect.setAttribute('rx', 4);
+                g.appendChild(rect);
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.textContent = 'BUY';
+                text.setAttribute('x', x1); text.setAttribute('y', y1 + 24);
+                text.setAttribute('fill', 'white'); text.setAttribute('font-size', '10px');
+                text.setAttribute('text-anchor', 'middle'); text.setAttribute('font-weight', 'bold');
+                g.appendChild(text);
+                svg.appendChild(g);
+            } else if (d.type === 'sellLabel' && x1 !== null && y1 !== null) {
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', x1 - 22); rect.setAttribute('y', y1 - 30);
+                rect.setAttribute('width', 44); rect.setAttribute('height', 20);
+                rect.setAttribute('fill', '#f23645'); rect.setAttribute('rx', 4);
+                g.appendChild(rect);
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.textContent = 'SELL';
+                text.setAttribute('x', x1); text.setAttribute('y', y1 - 16);
+                text.setAttribute('fill', 'white'); text.setAttribute('font-size', '10px');
+                text.setAttribute('text-anchor', 'middle'); text.setAttribute('font-weight', 'bold');
+                g.appendChild(text);
+                svg.appendChild(g);
+            } else if (d.type === 'arrowMark' && x1 !== null && y1 !== null) {
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.textContent = '➚';
+                text.setAttribute('x', x1); text.setAttribute('y', y1);
+                text.setAttribute('fill', d.color || '#2962ff');
+                text.setAttribute('font-size', '24px');
+                text.setAttribute('text-anchor', 'middle');
+                svg.appendChild(text);
+            } else if (d.type === 'riskReward' && x2 !== null && y2 !== null) {
+                // Similar to Long Position but with different labeling
+                const stopDist = 40;
+                const targetDist = 80;
+                const profit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                profit.setAttribute('x', Math.min(x1, x2)); profit.setAttribute('y', y1 - targetDist);
+                profit.setAttribute('width', Math.abs(x2 - x1)); profit.setAttribute('height', targetDist);
+                profit.setAttribute('fill', 'rgba(8, 153, 129, 0.15)');
+                svg.appendChild(profit);
+                const loss = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                loss.setAttribute('x', Math.min(x1, x2)); loss.setAttribute('y', y1);
+                loss.setAttribute('width', Math.abs(x2 - x1)); loss.setAttribute('height', stopDist);
+                loss.setAttribute('fill', 'rgba(242, 54, 69, 0.15)');
+                svg.appendChild(loss);
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.textContent = `R/R: ${(targetDist / stopDist).toFixed(2)}`;
+                text.setAttribute('x', x2 + 5); text.setAttribute('y', y1);
+                text.setAttribute('fill', '#d1d4dc'); text.setAttribute('font-size', '12px');
+                svg.appendChild(text);
             } else if (d.type === 'arc' && d.points.length >= 2) {
                 const p1 = d.points[0], p2 = d.points[2] || d.points[1], p3 = d.points[1];
                 const px1 = ts.timeToCoordinate(p1.time), py1 = ps.priceToCoordinate(p1.price);

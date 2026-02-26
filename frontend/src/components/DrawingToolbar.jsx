@@ -57,13 +57,25 @@ const DrawingToolbar = ({ activeTool, onSelectTool }) => {
             ]
         },
         {
+            id: 'annotations_cat',
+            type: 'group',
+            label: 'Annotations',
+            icon: '💬',
+            tools: [
+                { id: 'buyLabel', icon: '🏷️⬆️', label: 'Buy Label' },
+                { id: 'sellLabel', icon: '🏷️⬇️', label: 'Sell Label' },
+                { id: 'arrowMark', icon: '➚', label: 'Arrow Mark' },
+            ]
+        },
+        {
             id: 'measure_cat',
             type: 'group',
-            label: 'Measurement Tools',
+            label: 'Prediction & Risk',
             icon: '📏',
             tools: [
                 { id: 'longPosition', icon: '📈', label: 'Long Position' },
                 { id: 'shortPosition', icon: '📉', label: 'Short Position' },
+                { id: 'riskReward', icon: '⚖️', label: 'Risk/Reward Tool' },
                 { id: 'forecast', icon: '🔮', label: 'Forecast' },
                 { id: 'priceRange', icon: '↕', label: 'Price Range' },
                 { id: 'dateRange', icon: '↔', label: 'Date Range' },
