@@ -307,6 +307,9 @@ const Chart = ({
         const handleKeyDown = (e) => {
             if (e.ctrlKey && e.key === 'z') {
                 setDrawings(prev => prev.slice(0, -1));
+                drawingPointsRef.current = [];
+                setPreviewDrawing(null);
+                setActiveTool('cursor');
             }
             if (e.key === 'Escape') {
                 setActiveTool('cursor');
@@ -362,6 +365,10 @@ const Chart = ({
                 rectangle: 2,
                 circle: 2,
                 fibRetracement: 2,
+                parallelChannel: 3,
+                flatTopBottom: 3,
+                disjointChannel: 4,
+                regressionTrend: 2,
                 ellipse: 2,
                 triangle: 3
             };
@@ -743,13 +750,193 @@ const Chart = ({
                 line.setAttribute('stroke-dasharray', '4,4');
                 line.setAttribute('opacity', '0.5');
                 svg.appendChild(line);
+            } else if (d.type === 'parallelChannel' && d.points.length >= 2) {
+                const p1 = d.points[0];
+                const p2 = d.points[1];
+                const p3 = d.points[2] || d.points[1];
+
+                const px1 = ts.timeToCoordinate(p1.time);
+                const py1 = ps.priceToCoordinate(p1.price);
+                const px2 = ts.timeToCoordinate(p2.time);
+                const py2 = ps.priceToCoordinate(p2.price);
+                const px3 = ts.timeToCoordinate(p3.time);
+                const py3 = ps.priceToCoordinate(p3.price);
+
+                if (px1 !== null && py1 !== null && px2 !== null && py2 !== null) {
+                    const l1 = line.cloneNode();
+                    l1.setAttribute('x1', px1); l1.setAttribute('y1', py1);
+                    l1.setAttribute('x2', px2); l1.setAttribute('y2', py2);
+                    svg.appendChild(l1);
+
+                    if (px3 !== null && py3 !== null) {
+                        const dx = px2 - px1;
+                        const dy = py2 - py1;
+
+                        // Project p3 onto the line p1-p2 to find offset
+                        // For simplicity, we just use the vertical/perpendicular offset
+                        const offsetLine = line.cloneNode();
+                        const dyOffset = py3 - (py1 + (px3 - px1) * (dy / dx));
+
+                        offsetLine.setAttribute('x1', px1);
+                        offsetLine.setAttribute('y1', py1 + dyOffset);
+                        offsetLine.setAttribute('x2', px2);
+                        offsetLine.setAttribute('y2', py2 + dyOffset);
+                        svg.appendChild(offsetLine);
+
+                        // Shaded area
+                        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                        poly.setAttribute('points', `${px1},${py1} ${px2},${py2} ${px2},${py2 + dyOffset} ${px1},${py1 + dyOffset}`);
+                        poly.setAttribute('fill', d.fillColor || 'rgba(41, 98, 255, 0.1)');
+                        svg.appendChild(poly);
+                    }
+                }
+            } else if (d.type === 'flatTopBottom' && d.points.length >= 2) {
+                const p1 = d.points[0];
+                const p2 = d.points[1];
+                const p3 = d.points[2] || d.points[1];
+
+                const px1 = ts.timeToCoordinate(p1.time);
+                const py1 = ps.priceToCoordinate(p1.price);
+                const px2 = ts.timeToCoordinate(p2.time);
+                const py2 = ps.priceToCoordinate(p2.price);
+                const px3 = ts.timeToCoordinate(p3.time);
+                const py3 = ps.priceToCoordinate(p3.price);
+
+                if (px1 !== null && py1 !== null && px2 !== null && py2 !== null) {
+                    const l1 = line.cloneNode();
+                    l1.setAttribute('x1', px1); l1.setAttribute('y1', py1);
+                    l1.setAttribute('x2', px2); l1.setAttribute('y2', py1); // Horizontal
+                    svg.appendChild(l1);
+
+                    if (px3 !== null && py3 !== null) {
+                        const l2 = line.cloneNode();
+                        l2.setAttribute('x1', px1); l2.setAttribute('y1', py3);
+                        l2.setAttribute('x2', px2); l2.setAttribute('y2', py3);
+                        svg.appendChild(l2);
+
+                        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                        poly.setAttribute('points', `${px1},${py1} ${px2},${py1} ${px2},${py3} ${px1},${py3}`);
+                        poly.setAttribute('fill', d.fillColor || 'rgba(41, 98, 255, 0.1)');
+                        svg.appendChild(poly);
+                    }
+                }
+            } else if (d.type === 'disjointChannel' && d.points.length >= 2) {
+                const p1 = d.points[0];
+                const p2 = d.points[1];
+                const p3 = d.points[2];
+                const p4 = d.points[3] || (allDrawings.includes(previewDrawing) && d.points.length === 4 ? d.points[3] : null);
+
+                const px1 = ts.timeToCoordinate(p1.time);
+                const py1 = ps.priceToCoordinate(p1.price);
+                const px2 = ts.timeToCoordinate(p2.time);
+                const py2 = ps.priceToCoordinate(p2.price);
+
+                if (px1 !== null && py1 !== null && px2 !== null && py2 !== null) {
+                    const l1 = line.cloneNode();
+                    l1.setAttribute('x1', px1); l1.setAttribute('y1', py1);
+                    l1.setAttribute('x2', px2); l1.setAttribute('y2', py2);
+                    svg.appendChild(l1);
+
+                    const currentP3 = p3;
+                    const currentP4 = p4 || (allDrawings.includes(previewDrawing) && d.points.length === 4 ? d.points[3] : null);
+
+                    // If we have p3, we can preview l2 with mouse (which is p4 in preview points)
+                    if (currentP3) {
+                        const px3 = ts.timeToCoordinate(currentP3.time);
+                        const py3 = ps.priceToCoordinate(currentP3.price);
+                        const mousePoint = d.points[3] || d.points[d.points.length - 1]; // During preview, last point is mouse
+                        const px4 = ts.timeToCoordinate(mousePoint.time);
+                        const py4 = ps.priceToCoordinate(mousePoint.price);
+
+                        if (px3 !== null && py3 !== null && px4 !== null && py4 !== null) {
+                            const l2 = line.cloneNode();
+                            l2.setAttribute('x1', px3); l2.setAttribute('y1', py3);
+                            l2.setAttribute('x2', px4); l2.setAttribute('y2', py4);
+                            svg.appendChild(l2);
+                        }
+                    }
+                }
+            } else if (d.type === 'regressionTrend' && x2 !== null && y2 !== null) {
+                // Optimized Regression: Find indices instead of filtering every frame
+                const t1 = Math.min(d.p1.time, d.p2.time);
+                const t2 = Math.max(d.p1.time, d.p2.time);
+
+                // Assuming data is sorted by time (standard for candle data)
+                let startIdx = -1, endIdx = -1;
+                for (let i = 0; i < data.length; i++) {
+                    if (startIdx === -1 && data[i].time >= t1) startIdx = i;
+                    if (data[i].time <= t2) endIdx = i;
+                    if (data[i].time > t2) break;
+                }
+
+                if (startIdx !== -1 && endIdx !== -1 && endIdx > startIdx) {
+                    const n = endIdx - startIdx + 1;
+                    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+                    for (let i = startIdx; i <= endIdx; i++) {
+                        const x = i - startIdx;
+                        const y = data[i].close;
+                        sumX += x;
+                        sumY += y;
+                        sumXY += x * y;
+                        sumX2 += x * x;
+                    }
+                    const denominator = (n * sumX2 - sumX * sumX);
+                    if (denominator !== 0) {
+                        const slope = (n * sumXY - sumX * sumY) / denominator;
+                        const intercept = (sumY - slope * sumX) / n;
+
+                        const startPrice = intercept;
+                        const endPrice = intercept + slope * (n - 1);
+
+                        const ry1 = ps.priceToCoordinate(startPrice);
+                        const ry2 = ps.priceToCoordinate(endPrice);
+
+                        if (ry1 !== null && ry2 !== null) {
+                            line.setAttribute('x1', x1);
+                            line.setAttribute('y1', ry1);
+                            line.setAttribute('x2', x2);
+                            line.setAttribute('y2', ry2);
+                            svg.appendChild(line);
+
+                            // Standard Error Bands
+                            let sumSqErrors = 0;
+                            for (let i = startIdx; i <= endIdx; i++) {
+                                const pred = intercept + slope * (i - startIdx);
+                                sumSqErrors += Math.pow(data[i].close - pred, 2);
+                            }
+                            const stdev = Math.sqrt(sumSqErrors / n);
+                            const bandOffset = Math.abs(ps.priceToCoordinate(startPrice + stdev) - ry1);
+
+                            [1, -1].forEach(dir => {
+                                const band = line.cloneNode();
+                                band.setAttribute('x1', x1);
+                                band.setAttribute('y1', ry1 + dir * bandOffset);
+                                band.setAttribute('x2', x2);
+                                band.setAttribute('y2', ry2 + dir * bandOffset);
+                                band.setAttribute('opacity', '0.4');
+                                band.setAttribute('stroke-dasharray', '2,2');
+                                svg.appendChild(band);
+                            });
+                        }
+                    }
+                } else {
+                    line.setAttribute('x1', x1);
+                    line.setAttribute('y1', y1);
+                    line.setAttribute('x2', x2);
+                    line.setAttribute('y2', y2);
+                    svg.appendChild(line);
+                }
             } else {
                 return;
             }
 
             // Add anchor points
-            if (!allDrawings.includes(previewDrawing)) {
-                d.points.forEach(p => {
+            const isPreview = allDrawings.includes(previewDrawing);
+            if (!isPreview || d.points.length > 1) {
+                d.points.forEach((p, idx) => {
+                    // During preview, don't draw the last point (it's the moving mouse) as a fixed anchor
+                    if (isPreview && idx === d.points.length - 1) return;
+
                     const px = ts.timeToCoordinate(p.time);
                     const py = ps.priceToCoordinate(p.price);
                     if (px !== null && py !== null) {

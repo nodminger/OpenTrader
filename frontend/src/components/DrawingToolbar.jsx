@@ -28,6 +28,18 @@ const DrawingToolbar = ({ activeTool, onSelectTool }) => {
             ]
         },
         {
+            id: 'channels_cat',
+            type: 'group',
+            label: 'Channels',
+            icon: '▚',
+            tools: [
+                { id: 'parallelChannel', icon: '⫖', label: 'Parallel Channel' },
+                { id: 'regressionTrend', icon: '📈', label: 'Regression Trend' },
+                { id: 'flatTopBottom', icon: '⌸', label: 'Flat Top / Bottom' },
+                { id: 'disjointChannel', icon: '⩕', label: 'Disjoint Channel' },
+            ]
+        },
+        {
             id: 'shapes_cat',
             type: 'group',
             label: 'Shapes',
