@@ -46,9 +46,14 @@ const DrawingToolbar = ({ activeTool, onSelectTool }) => {
             icon: '⬛',
             tools: [
                 { id: 'rectangle', icon: '⬜', label: 'Rectangle' },
+                { id: 'rotatedRectangle', icon: '▱', label: 'Rotated Rectangle' },
                 { id: 'circle', icon: '○', label: 'Circle' },
-                { id: 'triangle', icon: '△', label: 'Triangle' },
                 { id: 'ellipse', icon: '◯', label: 'Ellipse' },
+                { id: 'triangle', icon: '△', label: 'Triangle' },
+                { id: 'polyline', icon: '⌇', label: 'Polyline' },
+                { id: 'curve', icon: '⌒', label: 'Curve' },
+                { id: 'doubleCurve', icon: '∼', label: 'Double Curve' },
+                { id: 'arc', icon: '◡', label: 'Arc' },
             ]
         },
         {

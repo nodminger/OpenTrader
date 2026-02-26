@@ -363,7 +363,14 @@ const Chart = ({
                 infoLine: 2,
                 trendAngle: 2,
                 rectangle: 2,
+                rotatedRectangle: 3,
                 circle: 2,
+                ellipse: 2,
+                triangle: 3,
+                polyline: 4,
+                curve: 3,
+                doubleCurve: 4,
+                arc: 3,
                 fibRetracement: 2,
                 fibExtension: 3,
                 fibSpeedArcs: 2,
@@ -726,6 +733,84 @@ const Chart = ({
                 circle.setAttribute('stroke-width', d.lineWidth || 2);
                 circle.setAttribute('fill', d.fillColor || 'rgba(41, 98, 255, 0.1)');
                 svg.appendChild(circle);
+            } else if (d.type === 'rotatedRectangle' && d.points.length >= 2) {
+                const p1 = d.points[0], p2 = d.points[1], p3 = d.points[2] || d.points[1];
+                const px1 = ts.timeToCoordinate(p1.time), py1 = ps.priceToCoordinate(p1.price);
+                const px2 = ts.timeToCoordinate(p2.time), py2 = ps.priceToCoordinate(p2.price);
+                const px3 = ts.timeToCoordinate(p3.time), py3 = ps.priceToCoordinate(p3.price);
+
+                if (px1 !== null && py1 !== null && px2 !== null && py2 !== null && px3 !== null && py3 !== null) {
+                    const dx = px2 - px1, dy = py2 - py1;
+                    // Vector (dx, dy) is the base side. 
+                    // Perpendicular vector is (-dy, dx).
+                    // Project p3-p1 onto perpendicular vector to find offset.
+                    const dist = ((px3 - px1) * (-dy) + (py3 - py1) * dx) / Math.sqrt(dx * dx + dy * dy) || 0;
+                    const perpX = -dy / Math.sqrt(dx * dx + dy * dy) * dist;
+                    const perpY = dx / Math.sqrt(dx * dx + dy * dy) * dist;
+
+                    const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                    poly.setAttribute('points', `${px1},${py1} ${px2},${py2} ${px2 + perpX},${py2 + perpY} ${px1 + perpX},${py1 + perpY}`);
+                    poly.setAttribute('stroke', d.color || '#2962ff');
+                    poly.setAttribute('stroke-width', d.lineWidth || 2);
+                    poly.setAttribute('fill', d.fillColor || 'rgba(41, 98, 255, 0.1)');
+                    svg.appendChild(poly);
+                }
+            } else if (d.type === 'polyline' && d.points.length >= 2) {
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+                const pts = d.points.map(p => {
+                    const px = ts.timeToCoordinate(p.time);
+                    const py = ps.priceToCoordinate(p.price);
+                    return (px !== null && py !== null) ? `${px},${py}` : '';
+                }).filter(s => s).join(' ');
+                poly.setAttribute('points', pts);
+                poly.setAttribute('stroke', d.color || '#2962ff');
+                poly.setAttribute('stroke-width', d.lineWidth || 2);
+                poly.setAttribute('fill', 'none');
+                svg.appendChild(poly);
+            } else if (d.type === 'curve' && d.points.length >= 2) {
+                // p1, p2 (control), p3
+                const p1 = d.points[0], p2 = d.points[1], p3 = d.points[2] || d.points[1];
+                const px1 = ts.timeToCoordinate(p1.time), py1 = ps.priceToCoordinate(p1.price);
+                const px2 = ts.timeToCoordinate(p2.time), py2 = ps.priceToCoordinate(p2.price);
+                const px3 = ts.timeToCoordinate(p3.time), py3 = ps.priceToCoordinate(p3.price);
+                if (px1 !== null && py1 !== null && px2 !== null && py2 !== null && px3 !== null && py3 !== null) {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', `M ${px1} ${py1} Q ${px2} ${py2} ${px3} ${py3}`);
+                    path.setAttribute('stroke', d.color || '#2962ff');
+                    path.setAttribute('stroke-width', d.lineWidth || 2);
+                    path.setAttribute('fill', 'none');
+                    svg.appendChild(path);
+                }
+            } else if (d.type === 'doubleCurve' && d.points.length >= 2) {
+                // Cubic Bezier: p1, p2 (ctrl1), p3 (ctrl2), p4
+                const p1 = d.points[0], p2 = d.points[1], p3 = d.points[2] || p1, p4 = d.points[3] || p3;
+                const px1 = ts.timeToCoordinate(p1.time), py1 = ps.priceToCoordinate(p1.price);
+                const px2 = ts.timeToCoordinate(p2.time), py2 = ps.priceToCoordinate(p2.price);
+                const px3 = ts.timeToCoordinate(p3.time), py3 = ps.priceToCoordinate(p3.price);
+                const px4 = ts.timeToCoordinate(p4.time), py4 = ps.priceToCoordinate(p4.price);
+                if (px1 !== null && py1 !== null && px2 !== null && py2 !== null && px3 !== null && py3 !== null && px4 !== null && py4 !== null) {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    path.setAttribute('d', `M ${px1} ${py1} C ${px2} ${py2} ${px3} ${py3} ${px4} ${py4}`);
+                    path.setAttribute('stroke', d.color || '#2962ff');
+                    path.setAttribute('stroke-width', d.lineWidth || 2);
+                    path.setAttribute('fill', 'none');
+                    svg.appendChild(path);
+                }
+            } else if (d.type === 'arc' && d.points.length >= 2) {
+                // Simplified arc using 3 points (p1, p2 endpoints, p3 defines height)
+                const p1 = d.points[0], p2 = d.points[2] || d.points[1], p3 = d.points[1];
+                const px1 = ts.timeToCoordinate(p1.time), py1 = ps.priceToCoordinate(p1.price);
+                const px2 = ts.timeToCoordinate(p2.time), py2 = ps.priceToCoordinate(p2.price);
+                const px3 = ts.timeToCoordinate(p3.time), py3 = ps.priceToCoordinate(p3.price);
+                if (px1 !== null && py1 !== null && px2 !== null && py2 !== null && px3 !== null && py3 !== null) {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    // We can use Quadratic Bezier for a simple arc appearance
+                    path.setAttribute('d', `M ${px1} ${py1} Q ${px3} ${py3} ${px2} ${py2}`);
+                    path.setAttribute('stroke', d.color || '#2962ff');
+                    path.setAttribute('stroke-width', d.lineWidth || 2);
+                    path.setAttribute('fill', 'none');
+                    svg.appendChild(path);
+                }
             } else if (d.type === 'fibRetracement' && x2 !== null && y2 !== null) {
                 const levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
                 const priceRange = d.p2.price - d.p1.price;
