@@ -632,6 +632,7 @@ div[class*="tradingview"] {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-dim);
 }
+
 /* Drawing Toolbar */
 .drawing-toolbar {
   position: absolute;
@@ -719,14 +720,15 @@ div[class*="tradingview"] {
   position: absolute;
   left: 48px;
   top: 0;
-  background-color: var(--bg-card);
+  background-color: rgba(30, 34, 45, 0.9);
+  backdrop-filter: blur(15px);
+  -webkit-backdrop-filter: blur(15px);
   border: 1px solid var(--border-color);
   border-radius: 8px;
   padding: 8px;
   min-width: 180px;
   z-index: 200;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-  backdrop-filter: blur(15px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.6);
 }
 
 .flyout-header {

@@ -51,6 +51,11 @@ function App() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
   }, [symbol, interval, chartType, indicators, drawings]);
 
+  // Window Title Hook
+  useEffect(() => {
+    document.title = `Open trader - ${symbol}`;
+  }, [symbol]);
+
   const fetchMoreDataRef = useRef(null);
   const isValidNum = (v) => typeof v === 'number' && isFinite(v);
 
