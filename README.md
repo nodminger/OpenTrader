@@ -7,13 +7,14 @@ OpenTrader is currently in early stage. Suggestions and issue raising are highly
 
 ## 📸 Screenshots
 
-![open trader trading view opensource alternative](https://raw.githubusercontent.com/nodminger/OpenTrader/refs/heads/master/Screenshots/screenshot1.png)
 ![open trader trading view opensource alternative](https://raw.githubusercontent.com/nodminger/OpenTrader/refs/heads/master/Screenshots/screenshot2.png)
 ![open trader trading view opensource alternative](https://raw.githubusercontent.com/nodminger/OpenTrader/refs/heads/master/Screenshots/screenshot3.png)
 ![open trader trading view opensource alternative](https://raw.githubusercontent.com/nodminger/OpenTrader/refs/heads/master/Screenshots/screenshot4.png)
 ![open trader trading view opensource alternative](https://raw.githubusercontent.com/nodminger/OpenTrader/refs/heads/master/Screenshots/screenshot5.png)
 ![open trader trading view opensource alternative](https://raw.githubusercontent.com/nodminger/OpenTrader/refs/heads/master/Screenshots/screenshot6.png)
-![alt text](https://raw.githubusercontent.com/nodminger/OpenTrader/refs/heads/master/Screenshots/screenshot7.png)
+![open trader trading view opensource alternative](https://raw.githubusercontent.com/nodminger/OpenTrader/refs/heads/master/Screenshots/screenshot7.png)
+![open trader trading view opensource alternative](https://raw.githubusercontent.com/nodminger/OpenTrader/refs/heads/master/Screenshots/screenshot8.png)
+![open trader trading view opensource alternative](https://raw.githubusercontent.com/nodminger/OpenTrader/refs/heads/master/Screenshots/screenshot9.png)
 
 ## 🚀 Goals
 
@@ -75,6 +76,53 @@ OpenTrader is currently in early stage. Suggestions and issue raising are highly
    ```bash
    npm run dev
    ```
+
+## 📊 Indicators
+
+OpenTrader supports the following technical indicators:
+
+- **Simple Moving Average (SMA)**
+- **Relative Strength Index (RSI)**
+- **Normalized MACD**
+- **Volume Profile / HD**
+- **Bollinger Bands (BB)**
+- **Stochastic Oscillator**
+- **Super Trend**
+- **Average True Range (ATR)**
+- **Ichimoku Cloud**
+- **True Strength Index (TSI)**
+
+## 🎨 Drawing Tools
+
+OpenTrader includes a comprehensive set of drawing tools organized by category:
+
+### Trend Line Tools
+- Trend Line, Arrow, Ray, Extended Line, Info Line, Trend Angle
+- Horizontal Line, Horizontal Ray, Vertical Line, Cross Line
+
+### Channels
+- Parallel Channel, Regression Trend, Flat Top / Bottom, Disjoint Channel
+
+### Shapes
+- Rectangle, Rotated Rectangle, Circle, Ellipse, Triangle, Polyline, Curve, Double Curve, Arc
+
+### Annotations
+- Buy Label, Sell Label, Arrow Mark
+
+### Prediction & Risk
+- Long Position, Short Position, Risk/Reward Tool, Forecast, Price Range, Date Range, Ghost Feed
+
+### Patterns
+- XABCD Pattern, Cypher Pattern, ABCD Pattern, Three Drives Pattern, Shark Pattern, 5-0 Pattern
+- Elliott Impulse Wave, Elliott Correction, Elliott Triangle, Elliott Double Combo, Elliott Triple Combo
+- Head & Shoulders, Triangle Pattern, Wedge Pattern, Rectangle Pattern, Channel Pattern, Double Top, Double Bottom
+
+### Pitchfork & Advanced
+- Pitchfork, Schiff Pitchfork, Modified Schiff Pitchfork, Inside Pitchfork, Regression Channel
+
+### Gann & Fibonacci
+- Fib Retracement, Trend-Based Fib Extension, Fib Speed Resistance Arcs, Fib Fan, Fib Time Zone
+- Fib Channel, Fib Wedge, Fib Spiral, Fib Circles, Gann Fan, Gann Square, Gann Box
 
 ## 🤝 Contributing
 
