@@ -57,6 +57,20 @@ const DrawingToolbar = ({ activeTool, onSelectTool }) => {
             ]
         },
         {
+            id: 'measure_cat',
+            type: 'group',
+            label: 'Measurement Tools',
+            icon: '📏',
+            tools: [
+                { id: 'longPosition', icon: '📈', label: 'Long Position' },
+                { id: 'shortPosition', icon: '📉', label: 'Short Position' },
+                { id: 'forecast', icon: '🔮', label: 'Forecast' },
+                { id: 'priceRange', icon: '↕', label: 'Price Range' },
+                { id: 'dateRange', icon: '↔', label: 'Date Range' },
+                { id: 'ghostFeed', icon: '👻', label: 'Ghost Feed' },
+            ]
+        },
+        {
             id: 'fib_cat',
             type: 'group',
             label: 'Gann & Fibonacci',

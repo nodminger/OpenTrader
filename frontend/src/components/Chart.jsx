@@ -371,6 +371,12 @@ const Chart = ({
                 curve: 3,
                 doubleCurve: 4,
                 arc: 3,
+                longPosition: 2,
+                shortPosition: 2,
+                forecast: 2,
+                priceRange: 2,
+                dateRange: 2,
+                ghostFeed: 2,
                 fibRetracement: 2,
                 fibExtension: 3,
                 fibSpeedArcs: 2,
@@ -796,15 +802,109 @@ const Chart = ({
                     path.setAttribute('fill', 'none');
                     svg.appendChild(path);
                 }
+            } else if (d.type === 'longPosition' && x2 !== null && y2 !== null) {
+                const stopDist = 50; // default stop loss pixels
+                const targetDist = 100; // default profit target pixels
+
+                // Profit Zone
+                const profit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                profit.setAttribute('x', Math.min(x1, x2));
+                profit.setAttribute('y', y1 - targetDist);
+                profit.setAttribute('width', Math.abs(x2 - x1));
+                profit.setAttribute('height', targetDist);
+                profit.setAttribute('fill', 'rgba(8, 153, 129, 0.2)');
+                svg.appendChild(profit);
+
+                // Loss Zone
+                const loss = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                loss.setAttribute('x', Math.min(x1, x2));
+                loss.setAttribute('y', y1);
+                loss.setAttribute('width', Math.abs(x2 - x1));
+                loss.setAttribute('height', stopDist);
+                loss.setAttribute('fill', 'rgba(242, 54, 69, 0.2)');
+                svg.appendChild(loss);
+
+                const centerLine = line.cloneNode();
+                centerLine.setAttribute('x1', Math.min(x1, x2)); centerLine.setAttribute('x2', Math.max(x1, x2));
+                centerLine.setAttribute('y1', y1); centerLine.setAttribute('y2', y1);
+                svg.appendChild(centerLine);
+            } else if (d.type === 'shortPosition' && x2 !== null && y2 !== null) {
+                const stopDist = 50;
+                const targetDist = 100;
+
+                const loss = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                loss.setAttribute('x', Math.min(x1, x2));
+                loss.setAttribute('y', y1 - stopDist);
+                loss.setAttribute('width', Math.abs(x2 - x1));
+                loss.setAttribute('height', stopDist);
+                loss.setAttribute('fill', 'rgba(242, 54, 69, 0.2)');
+                svg.appendChild(loss);
+
+                const profit = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                profit.setAttribute('x', Math.min(x1, x2));
+                profit.setAttribute('y', y1);
+                profit.setAttribute('width', Math.abs(x2 - x1));
+                profit.setAttribute('height', targetDist);
+                profit.setAttribute('fill', 'rgba(8, 153, 129, 0.2)');
+                svg.appendChild(profit);
+
+                const centerLine = line.cloneNode();
+                centerLine.setAttribute('x1', Math.min(x1, x2)); centerLine.setAttribute('x2', Math.max(x1, x2));
+                centerLine.setAttribute('y1', y1); centerLine.setAttribute('y2', y1);
+                svg.appendChild(centerLine);
+            } else if (d.type === 'priceRange' && x2 !== null && y2 !== null) {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', Math.min(x1, x2)); rect.setAttribute('y', Math.min(y1, y2));
+                rect.setAttribute('width', Math.abs(x2 - x1)); rect.setAttribute('height', Math.abs(y2 - y1));
+                rect.setAttribute('fill', 'rgba(41, 98, 255, 0.1)');
+                rect.setAttribute('stroke', d.color || '#2962ff');
+                svg.appendChild(rect);
+
+                const priceDiff = Math.abs(d.p2.price - d.p1.price);
+                const percentChange = (priceDiff / d.p1.price) * 100;
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.textContent = `${priceDiff.toFixed(2)} (${percentChange.toFixed(2)}%)`;
+                text.setAttribute('x', x2 + 5); text.setAttribute('y', (y1 + y2) / 2);
+                text.setAttribute('fill', '#d1d4dc'); text.setAttribute('font-size', '12px');
+                svg.appendChild(text);
+            } else if (d.type === 'dateRange' && x2 !== null && y2 !== null) {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', Math.min(x1, x2)); rect.setAttribute('y', 0);
+                rect.setAttribute('width', Math.abs(x2 - x1)); rect.setAttribute('height', height);
+                rect.setAttribute('fill', 'rgba(41, 98, 255, 0.1)');
+                svg.appendChild(rect);
+
+                const bars = Math.abs(data.findIndex(item => item.time === d.p2.time) - data.findIndex(item => item.time === d.p1.time));
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.textContent = `${bars} bars`;
+                text.setAttribute('x', (x1 + x2) / 2); text.setAttribute('y', 20);
+                text.setAttribute('fill', '#d1d4dc'); text.setAttribute('font-size', '12px');
+                text.setAttribute('text-anchor', 'middle');
+                svg.appendChild(text);
+            } else if (d.type === 'forecast' && x2 !== null && y2 !== null) {
+                line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+                line.setAttribute('stroke-dasharray', '4,4');
+                svg.appendChild(line);
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.textContent = 'Forecast';
+                text.setAttribute('x', x2 + 5); text.setAttribute('y', y2 - 5);
+                text.setAttribute('fill', d.color); text.setAttribute('font-size', '10px');
+                svg.appendChild(text);
+            } else if (d.type === 'ghostFeed' && x2 !== null && y2 !== null) {
+                const ghost = line.cloneNode();
+                ghost.setAttribute('x1', x1); ghost.setAttribute('y1', y1);
+                ghost.setAttribute('x2', x2); ghost.setAttribute('y2', y2);
+                ghost.setAttribute('stroke-dasharray', '2,4');
+                ghost.setAttribute('opacity', '0.5');
+                svg.appendChild(ghost);
             } else if (d.type === 'arc' && d.points.length >= 2) {
-                // Simplified arc using 3 points (p1, p2 endpoints, p3 defines height)
                 const p1 = d.points[0], p2 = d.points[2] || d.points[1], p3 = d.points[1];
                 const px1 = ts.timeToCoordinate(p1.time), py1 = ps.priceToCoordinate(p1.price);
                 const px2 = ts.timeToCoordinate(p2.time), py2 = ps.priceToCoordinate(p2.price);
                 const px3 = ts.timeToCoordinate(p3.time), py3 = ps.priceToCoordinate(p3.price);
                 if (px1 !== null && py1 !== null && px2 !== null && py2 !== null && px3 !== null && py3 !== null) {
                     const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-                    // We can use Quadratic Bezier for a simple arc appearance
                     path.setAttribute('d', `M ${px1} ${py1} Q ${px3} ${py3} ${px2} ${py2}`);
                     path.setAttribute('stroke', d.color || '#2962ff');
                     path.setAttribute('stroke-width', d.lineWidth || 2);
