@@ -5,6 +5,7 @@ import Chart from './components/Chart';
 import IndicatorPanel from './components/IndicatorPanel';
 import IndicatorSearch from './components/IndicatorSearch';
 import SymbolSearch from './components/SymbolSearch';
+import DrawingToolbar from './components/DrawingToolbar';
 import { SMA_COLORS } from './Indicators/sma';
 
 const STORAGE_KEY = 'opentrader_settings';
@@ -34,6 +35,8 @@ function App() {
   const [indicators, setIndicators] = useState(savedSettings.indicators || []);
   const [showIndicatorSearch, setShowIndicatorSearch] = useState(false);
   const [showSymbolSearch, setShowSymbolSearch] = useState(false);
+  const [activeTool, setActiveTool] = useState('cursor');
+  const [drawings, setDrawings] = useState(savedSettings.drawings || []);
   const loadingMoreRef = useRef(false);
 
   // Persistence Hook: Save settings whenever they change
@@ -42,10 +45,11 @@ function App() {
       symbol,
       interval,
       chartType,
-      indicators
+      indicators,
+      drawings
     };
     localStorage.setItem(STORAGE_KEY, JSON.stringify(settings));
-  }, [symbol, interval, chartType, indicators]);
+  }, [symbol, interval, chartType, indicators, drawings]);
 
   const fetchMoreDataRef = useRef(null);
   const isValidNum = (v) => typeof v === 'number' && isFinite(v);
@@ -407,6 +411,17 @@ function App() {
         openSymbolSearch={() => setShowSymbolSearch(true)}
       />
       <div style={{ flex: 1, position: 'relative', minHeight: 0 }}>
+        <DrawingToolbar
+          activeTool={activeTool}
+          onSelectTool={(tool) => {
+            if (tool === 'eraser') {
+              if (window.confirm('Delete all drawings?')) setDrawings([]);
+              setActiveTool('cursor');
+            } else {
+              setActiveTool(tool);
+            }
+          }}
+        />
 
         {/* TOP LEGEND (Main OHLC) */}
         <div className="chart-legend-main">
@@ -742,6 +757,10 @@ function App() {
             symbol={symbol}
             interval={interval}
             indicators={indicators}
+            drawings={drawings}
+            setDrawings={setDrawings}
+            activeTool={activeTool}
+            setActiveTool={setActiveTool}
             onVisibleLogicalRangeChange={handleVisibleLogicalRangeChange}
             onCrosshairMove={handleCrosshairMove}
           />

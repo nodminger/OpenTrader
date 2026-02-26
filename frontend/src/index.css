@@ -632,3 +632,58 @@ div[class*="tradingview"] {
 ::-webkit-scrollbar-thumb:hover {
   background: var(--text-dim);
 }
+/* Drawing Toolbar */
+.drawing-toolbar {
+  position: absolute;
+  top: 60px;
+  left: 8px;
+  width: 42px;
+  background-color: rgba(30, 34, 45, 0.8);
+  backdrop-filter: blur(10px);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  padding: 4px;
+  gap: 4px;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+}
+
+.drawing-tool-btn {
+  width: 32px;
+  height: 32px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  color: var(--text-dim);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 18px;
+}
+
+.drawing-tool-btn:hover {
+  background-color: rgba(255, 255, 255, 0.08);
+  color: var(--text-main);
+}
+
+.drawing-tool-btn.active {
+  background-color: var(--accent);
+  color: white;
+  box-shadow: 0 0 10px rgba(41, 98, 255, 0.4);
+}
+
+.tool-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: Arial, sans-serif;
+  font-weight: bold;
+}
+
+.drawing-active {
+  cursor: crosshair !important;
+}

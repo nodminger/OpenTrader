@@ -33,6 +33,19 @@ function computeHeikinAshi(data) {
     return ha;
 }
 
+// Custom primitive to sync SVG with chart movements
+class SyncPrimitive {
+    constructor(callback) {
+        this._callback = callback;
+    }
+    updateAllViews() {
+        this._callback();
+    }
+    paneViews() { return []; }
+    priceAxisViews() { return []; }
+    timeAxisViews() { return []; }
+}
+
 const Chart = ({
     data,
     chartType,
@@ -40,11 +53,18 @@ const Chart = ({
     interval,
     onVisibleLogicalRangeChange,
     onCrosshairMove,
-    indicators = []
+    indicators = [],
+    drawings = [],
+    setDrawings,
+    activeTool,
+    setActiveTool
 }) => {
     const containerRef = useRef();
     const chartRef = useRef(null);
     const priceSeriesRef = useRef(null);
+    const drawingRef = useRef(null);
+    const [previewDrawing, setPreviewDrawing] = useState(null);
+    const drawingPointsRef = useRef([]);
     const volumeSeriesRef = useRef(null);
     const smaSeriesRef = useRef({});
     const rsiSeriesRef = useRef({});
@@ -61,6 +81,7 @@ const Chart = ({
     const [vpBins, setVpBins] = useState([]);
     const [bbFillData, setBbFillData] = useState(null);
     const [ichimokuFillData, setIchimokuFillData] = useState(null);
+    const [chartTick, setChartTick] = useState(0);
 
     const isFirstLoad = useRef(true);
     const lastSymbolInterval = useRef(`${symbol}-${interval}`);
@@ -68,8 +89,10 @@ const Chart = ({
 
     const onRangeChangeRef = useRef(onVisibleLogicalRangeChange);
     const onCrosshairMoveRef = useRef(onCrosshairMove);
+    const activeToolRef = useRef(activeTool);
     useEffect(() => { onRangeChangeRef.current = onVisibleLogicalRangeChange; }, [onVisibleLogicalRangeChange]);
     useEffect(() => { onCrosshairMoveRef.current = onCrosshairMove; }, [onCrosshairMove]);
+    useEffect(() => { activeToolRef.current = activeTool; }, [activeTool]);
 
     // Initialize Chart
     useEffect(() => {
@@ -110,6 +133,21 @@ const Chart = ({
         chart.timeScale().subscribeVisibleLogicalRangeChange(rangeChangeHandler);
 
         const crosshairHandler = (param) => {
+            const currentTool = activeToolRef.current;
+            if (currentTool && currentTool !== 'cursor' && param.point && priceSeriesRef.current) {
+                const time = param.time;
+                const price = priceSeriesRef.current.coordinateToPrice(param.point.y);
+
+                if (drawingPointsRef.current.length > 0) {
+                    setPreviewDrawing({
+                        type: currentTool,
+                        points: [...drawingPointsRef.current, { time, price }],
+                        p1: drawingPointsRef.current[0], // backward compatibility
+                        p2: { time, price }
+                    });
+                }
+            }
+
             if (!onCrosshairMoveRef.current) return;
             if (!param.time || !priceSeriesRef.current || param.point === undefined) {
                 onCrosshairMoveRef.current(null);
@@ -262,7 +300,88 @@ const Chart = ({
             ichimokuSeriesRef.current = {};
             tsiSeriesRef.current = {};
         };
-    }, []);
+    }, []); // Removed [activeTool] to prevent chart recreation
+
+    // Keyboard Shortcuts
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.ctrlKey && e.key === 'z') {
+                setDrawings(prev => prev.slice(0, -1));
+            }
+            if (e.key === 'Escape') {
+                setActiveTool('cursor');
+                drawingPointsRef.current = [];
+                setPreviewDrawing(null);
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [setDrawings, setActiveTool]);
+
+    // Handle Clicks for Drawing
+    useEffect(() => {
+        if (!chartRef.current || !activeTool || activeTool === 'cursor') {
+            drawingPointsRef.current = [];
+            setPreviewDrawing(null);
+            return;
+        }
+
+        const clickHandler = (param) => {
+            if (!param.point || !priceSeriesRef.current) return;
+            const time = param.time;
+            const price = priceSeriesRef.current.coordinateToPrice(param.point.y);
+
+            const points = drawingPointsRef.current;
+
+            if (activeTool === 'horizontalLine' || activeTool === 'verticalLine' || activeTool === 'horizontalRay' || activeTool === 'crossLine') {
+                const newDrawing = {
+                    id: Date.now().toString(),
+                    type: activeTool,
+                    points: [{ time, price }],
+                    p1: { time, price },
+                    p2: { time, price }, // Some tools might need same values initially
+                    color: '#2962ff',
+                    lineWidth: 2
+                };
+                setDrawings(prev => [...prev, newDrawing]);
+                setActiveTool('cursor');
+                return;
+            }
+
+            // For multi-point tools
+            const newPoints = [...points, { time, price }];
+            drawingPointsRef.current = newPoints;
+
+            const requiredPoints = {
+                trend: 2,
+                ray: 2,
+                extendedLine: 2,
+                ellipse: 2,
+                triangle: 3
+            };
+
+            if (newPoints.length >= requiredPoints[activeTool]) {
+                const newDrawing = {
+                    id: Date.now().toString(),
+                    type: activeTool,
+                    points: newPoints,
+                    p1: newPoints[0],
+                    p2: newPoints[1],
+                    color: '#2962ff',
+                    lineWidth: 2
+                };
+                setDrawings(prev => [...prev, newDrawing]);
+                drawingPointsRef.current = [];
+                setPreviewDrawing(null);
+                setActiveTool('cursor');
+            }
+        };
+
+        chartRef.current.subscribeClick(clickHandler);
+        return () => {
+            if (chartRef.current) chartRef.current.unsubscribeClick(clickHandler);
+        };
+    }, [activeTool, setDrawings, setActiveTool]);
 
     // Sync BB Background Shade
     useEffect(() => {
@@ -393,6 +512,129 @@ const Chart = ({
         }
     }, [ichimokuFillData, indicators, data]);
 
+    // Render Drawings and Annotations
+    useEffect(() => {
+        if (!chartRef.current || !drawingRef.current || !priceSeriesRef.current || !containerRef.current) return;
+        const svg = drawingRef.current;
+        while (svg.firstChild) svg.removeChild(svg.firstChild);
+
+        const ts = chartRef.current.timeScale();
+        const ps = priceSeriesRef.current;
+        const width = containerRef.current.clientWidth;
+        const height = containerRef.current.clientHeight;
+        const allDrawings = [...drawings, ...(previewDrawing ? [previewDrawing] : [])];
+
+        allDrawings.forEach(d => {
+            if (!d.p1) return;
+            const x1 = ts.timeToCoordinate(d.p1.time);
+            const y1 = ps.priceToCoordinate(d.p1.price);
+
+            if (x1 === null || y1 === null) return;
+
+            let x2 = d.p2 ? ts.timeToCoordinate(d.p2.time) : null;
+            let y2 = d.p2 ? ps.priceToCoordinate(d.p2.price) : null;
+
+            const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+            line.setAttribute('stroke', d.color || '#2962ff');
+            line.setAttribute('stroke-width', d.lineWidth || 2);
+            line.setAttribute('stroke-linecap', 'round');
+
+            if (d.type === 'trend' && x2 !== null && y2 !== null) {
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                svg.appendChild(line);
+            } else if (d.type === 'ray' && x2 !== null && y2 !== null) {
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                const dist = 10000;
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x1 + Math.cos(angle) * dist);
+                line.setAttribute('y2', y1 + Math.sin(angle) * dist);
+                svg.appendChild(line);
+            } else if (d.type === 'extendedLine' && x2 !== null && y2 !== null) {
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                const dist = 10000;
+                line.setAttribute('x1', x1 - Math.cos(angle) * dist);
+                line.setAttribute('y1', y1 - Math.sin(angle) * dist);
+                line.setAttribute('x2', x1 + Math.cos(angle) * dist);
+                line.setAttribute('y2', y1 + Math.sin(angle) * dist);
+                svg.appendChild(line);
+            } else if (d.type === 'horizontalLine') {
+                line.setAttribute('x1', 0);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', width);
+                line.setAttribute('y2', y1);
+                svg.appendChild(line);
+            } else if (d.type === 'horizontalRay') {
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', width);
+                line.setAttribute('y2', y1);
+                svg.appendChild(line);
+            } else if (d.type === 'verticalLine') {
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', 0);
+                line.setAttribute('x2', x1);
+                line.setAttribute('y2', height);
+                svg.appendChild(line);
+            } else if (d.type === 'crossLine') {
+                const hLine = line.cloneNode();
+                hLine.setAttribute('x1', 0); hLine.setAttribute('y1', y1);
+                hLine.setAttribute('x2', width); hLine.setAttribute('y2', y1);
+                svg.appendChild(hLine);
+                const vLine = line.cloneNode();
+                vLine.setAttribute('x1', x1); vLine.setAttribute('y1', 0);
+                vLine.setAttribute('x2', x1); vLine.setAttribute('y2', height);
+                svg.appendChild(vLine);
+            } else if (d.type === 'triangle') {
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                const pointsStr = d.points.map(p => {
+                    const px = ts.timeToCoordinate(p.time);
+                    const py = ps.priceToCoordinate(p.price);
+                    return (px !== null && py !== null) ? `${px},${py}` : '';
+                }).filter(s => s).join(' ');
+
+                poly.setAttribute('points', pointsStr);
+                poly.setAttribute('stroke', d.color || '#2962ff');
+                poly.setAttribute('stroke-width', d.lineWidth || 2);
+                poly.setAttribute('fill', d.fillColor || 'rgba(41, 98, 255, 0.1)');
+                svg.appendChild(poly);
+            } else if (d.type === 'ellipse' && x2 !== null && y2 !== null) {
+                const ellipse = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+                ellipse.setAttribute('cx', x1);
+                ellipse.setAttribute('cy', y1);
+                ellipse.setAttribute('rx', Math.abs(x2 - x1));
+                ellipse.setAttribute('ry', Math.abs(y2 - y1));
+                ellipse.setAttribute('stroke', d.color || '#2962ff');
+                ellipse.setAttribute('stroke-width', d.lineWidth || 2);
+                ellipse.setAttribute('fill', d.fillColor || 'rgba(41, 98, 255, 0.1)');
+                svg.appendChild(ellipse);
+            } else {
+                return;
+            }
+
+            // Add anchor points
+            if (!allDrawings.includes(previewDrawing)) {
+                d.points.forEach(p => {
+                    const px = ts.timeToCoordinate(p.time);
+                    const py = ps.priceToCoordinate(p.price);
+                    if (px !== null && py !== null) {
+                        const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                        circle.setAttribute('cx', px);
+                        circle.setAttribute('cy', py);
+                        circle.setAttribute('r', 4);
+                        circle.setAttribute('fill', '#131722');
+                        circle.setAttribute('stroke', d.color || '#2962ff');
+                        circle.setAttribute('stroke-width', 2);
+                        svg.appendChild(circle);
+                    }
+                });
+            }
+        });
+    }, [drawings, previewDrawing, data, chartTick]);
+
     // Reset FirstLoad tracking on Symbol or Interval change
     useEffect(() => {
         const key = `${symbol}-${interval}`;
@@ -491,6 +733,12 @@ const Chart = ({
                 });
             }
             lastChartType.current = chartType;
+
+            // Perfect drawing sync: Attach primitive once per series creation
+            const syncProp = new SyncPrimitive(() => {
+                setChartTick(t => t + 1);
+            });
+            priceSeriesRef.current.attachPrimitive(syncProp);
         }
 
         const priceData = chartType === 'heikin' ? computeHeikinAshi(data) : (chartType === 'line' ? data.map(d => ({ time: d.time, value: d.close })) : data);
@@ -722,12 +970,13 @@ const Chart = ({
     }, [data, chartType, indicators, symbol, interval]);
 
     return (
-        <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+        <div style={{ position: 'relative', width: '100%', height: '100%' }} className={activeTool !== 'cursor' ? 'drawing-active' : ''}>
             <div ref={containerRef} style={{ width: '100%', height: '100%' }} />
             {/* Overlay SVGs for Background Shades and Volume Profiles */}
             <svg ref={bbFillRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0, opacity: 0.8 }} />
             <svg ref={ichimokuFillRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 0, opacity: 0.8 }} />
             <svg ref={vpRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 1 }} />
+            <svg ref={drawingRef} style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', pointerEvents: 'none', zIndex: 100 }} />
         </div>
     );
 };
