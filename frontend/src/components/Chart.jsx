@@ -354,8 +354,14 @@ const Chart = ({
 
             const requiredPoints = {
                 trend: 2,
+                arrow: 2,
                 ray: 2,
                 extendedLine: 2,
+                infoLine: 2,
+                trendAngle: 2,
+                rectangle: 2,
+                circle: 2,
+                fibRetracement: 2,
                 ellipse: 2,
                 triangle: 3
             };
@@ -545,6 +551,24 @@ const Chart = ({
                 line.setAttribute('x2', x2);
                 line.setAttribute('y2', y2);
                 svg.appendChild(line);
+            } else if (d.type === 'arrow' && x2 !== null && y2 !== null) {
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                svg.appendChild(line);
+
+                // Arrow head
+                const arrowHead = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                const angle = Math.atan2(y2 - y1, x2 - x1);
+                const headSize = 10;
+                const p1x = x2 - headSize * Math.cos(angle - Math.PI / 6);
+                const p1y = y2 - headSize * Math.sin(angle - Math.PI / 6);
+                const p2x = x2 - headSize * Math.cos(angle + Math.PI / 6);
+                const p2y = y2 - headSize * Math.sin(angle + Math.PI / 6);
+                arrowHead.setAttribute('points', `${x2},${y2} ${p1x},${p1y} ${p2x},${p2y}`);
+                arrowHead.setAttribute('fill', d.color || '#2962ff');
+                svg.appendChild(arrowHead);
             } else if (d.type === 'ray' && x2 !== null && y2 !== null) {
                 const angle = Math.atan2(y2 - y1, x2 - x1);
                 const dist = 10000;
@@ -561,6 +585,55 @@ const Chart = ({
                 line.setAttribute('x2', x1 + Math.cos(angle) * dist);
                 line.setAttribute('y2', y1 + Math.sin(angle) * dist);
                 svg.appendChild(line);
+            } else if (d.type === 'infoLine' && x2 !== null && y2 !== null) {
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                svg.appendChild(line);
+
+                // Info Box
+                const priceDiff = d.p2.price - d.p1.price;
+                const percDiff = (priceDiff / d.p1.price) * 100;
+                const bars = Math.round(Math.abs(x2 - x1) / 10); // Approximation if we don't count data points exactly
+
+                const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+
+                text.textContent = `${priceDiff.toFixed(2)} (${percDiff.toFixed(2)}%)`;
+                text.setAttribute('x', x2 + 10);
+                text.setAttribute('y', y2 - 10);
+                text.setAttribute('fill', '#d1d4dc');
+                text.setAttribute('font-size', '12px');
+                text.setAttribute('font-family', 'Inter, sans-serif');
+
+                svg.appendChild(text);
+            } else if (d.type === 'trendAngle' && x2 !== null && y2 !== null) {
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                svg.appendChild(line);
+
+                // Horizontal reference line for angle
+                const refLine = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                refLine.setAttribute('x1', x1);
+                refLine.setAttribute('y1', y1);
+                refLine.setAttribute('x2', x1 + 50);
+                refLine.setAttribute('y2', y1);
+                refLine.setAttribute('stroke', 'rgba(209, 212, 220, 0.3)');
+                refLine.setAttribute('stroke-dasharray', '4');
+                svg.appendChild(refLine);
+
+                const angleDeg = -Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+                const text = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                text.textContent = `${angleDeg.toFixed(1)}°`;
+                text.setAttribute('x', x1 + 20);
+                text.setAttribute('y', y1 - 5);
+                text.setAttribute('fill', '#d1d4dc');
+                text.setAttribute('font-size', '12px');
+                svg.appendChild(text);
             } else if (d.type === 'horizontalLine') {
                 line.setAttribute('x1', 0);
                 line.setAttribute('y1', y1);
@@ -611,6 +684,65 @@ const Chart = ({
                 ellipse.setAttribute('stroke-width', d.lineWidth || 2);
                 ellipse.setAttribute('fill', d.fillColor || 'rgba(41, 98, 255, 0.1)');
                 svg.appendChild(ellipse);
+            } else if (d.type === 'rectangle' && x2 !== null && y2 !== null) {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                const rx = Math.min(x1, x2);
+                const ry = Math.min(y1, y2);
+                const rw = Math.abs(x2 - x1);
+                const rh = Math.abs(y2 - y1);
+                rect.setAttribute('x', rx);
+                rect.setAttribute('y', ry);
+                rect.setAttribute('width', rw);
+                rect.setAttribute('height', rh);
+                rect.setAttribute('stroke', d.color || '#2962ff');
+                rect.setAttribute('stroke-width', d.lineWidth || 2);
+                rect.setAttribute('fill', d.fillColor || 'rgba(41, 98, 255, 0.1)');
+                svg.appendChild(rect);
+            } else if (d.type === 'circle' && x2 !== null && y2 !== null) {
+                const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                const radius = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                circle.setAttribute('cx', x1);
+                circle.setAttribute('cy', y1);
+                circle.setAttribute('r', radius);
+                circle.setAttribute('stroke', d.color || '#2962ff');
+                circle.setAttribute('stroke-width', d.lineWidth || 2);
+                circle.setAttribute('fill', d.fillColor || 'rgba(41, 98, 255, 0.1)');
+                svg.appendChild(circle);
+            } else if (d.type === 'fibRetracement' && x2 !== null && y2 !== null) {
+                const levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+                const priceRange = d.p2.price - d.p1.price;
+
+                levels.forEach(lvl => {
+                    const price = d.p1.price + priceRange * lvl;
+                    const cosY = ps.priceToCoordinate(price);
+                    if (cosY !== null) {
+                        const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        l.setAttribute('x1', Math.min(x1, x2));
+                        l.setAttribute('y1', cosY);
+                        l.setAttribute('x2', Math.max(x1, x2));
+                        l.setAttribute('y2', cosY);
+                        l.setAttribute('stroke', d.color || '#2962ff');
+                        l.setAttribute('stroke-width', 1);
+                        l.setAttribute('stroke-dasharray', '2,2');
+                        svg.appendChild(l);
+
+                        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        t.textContent = `${lvl.toFixed(3)} (${price.toFixed(2)})`;
+                        t.setAttribute('x', Math.max(x1, x2) + 5);
+                        t.setAttribute('y', cosY + 3);
+                        t.setAttribute('fill', '#d1d4dc');
+                        t.setAttribute('font-size', '10px');
+                        svg.appendChild(t);
+                    }
+                });
+
+                line.setAttribute('x1', x1);
+                line.setAttribute('y1', y1);
+                line.setAttribute('x2', x2);
+                line.setAttribute('y2', y2);
+                line.setAttribute('stroke-dasharray', '4,4');
+                line.setAttribute('opacity', '0.5');
+                svg.appendChild(line);
             } else {
                 return;
             }

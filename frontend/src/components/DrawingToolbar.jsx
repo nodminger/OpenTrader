@@ -1,31 +1,109 @@
 import React from 'react';
 
 const DrawingToolbar = ({ activeTool, onSelectTool }) => {
-    const tools = [
-        { id: 'cursor', icon: '↖️', label: 'Cursor' },
-        { id: 'trend', icon: '╱', label: 'Trend Line' },
-        { id: 'ray', icon: '→', label: 'Ray' },
-        { id: 'extendedLine', icon: '⟷', label: 'Extended Line' },
-        { id: 'horizontalLine', icon: '―', label: 'Horizontal Line' },
-        { id: 'horizontalRay', icon: '⎯→', label: 'Horizontal Ray' },
-        { id: 'verticalLine', icon: '｜', label: 'Vertical Line' },
-        { id: 'crossLine', icon: '╓', label: 'Cross Line' },
-        { id: 'triangle', icon: '△', label: 'Triangle' },
-        { id: 'ellipse', icon: '◯', label: 'Ellipse' },
-        { id: 'eraser', icon: '🧹', label: 'Clear All' },
+    const [openCategory, setOpenCategory] = React.useState(null);
+
+    const categories = [
+        {
+            id: 'cursor_cat',
+            type: 'single',
+            tool: { id: 'cursor', icon: '↖️', label: 'Cursor' }
+        },
+        {
+            id: 'trend_cat',
+            type: 'group',
+            label: 'Trend Line Tools',
+            icon: '╱',
+            tools: [
+                { id: 'trend', icon: '╱', label: 'Trend Line' },
+                { id: 'arrow', icon: '↗', label: 'Arrow' },
+                { id: 'ray', icon: '→', label: 'Ray' },
+                { id: 'extendedLine', icon: '⟷', label: 'Extended Line' },
+                { id: 'infoLine', icon: 'ⓘ', label: 'Info Line' },
+                { id: 'trendAngle', icon: '∠', label: 'Trend Angle' },
+                { id: 'horizontalLine', icon: '―', label: 'Horizontal Line' },
+                { id: 'horizontalRay', icon: '⎯→', label: 'Horizontal Ray' },
+                { id: 'verticalLine', icon: '｜', label: 'Vertical Line' },
+                { id: 'crossLine', icon: '╓', label: 'Cross Line' },
+            ]
+        },
+        {
+            id: 'shapes_cat',
+            type: 'group',
+            label: 'Shapes',
+            icon: '⬛',
+            tools: [
+                { id: 'rectangle', icon: '⬜', label: 'Rectangle' },
+                { id: 'circle', icon: '○', label: 'Circle' },
+                { id: 'triangle', icon: '△', label: 'Triangle' },
+                { id: 'ellipse', icon: '◯', label: 'Ellipse' },
+            ]
+        },
+        {
+            id: 'fib_cat',
+            type: 'group',
+            label: 'Gann & Fibonacci',
+            icon: '≡',
+            tools: [
+                { id: 'fibRetracement', icon: '≡', label: 'Fib Retracement' },
+            ]
+        },
+        {
+            id: 'utils_cat',
+            type: 'single',
+            tool: { id: 'eraser', icon: '🧹', label: 'Clear All' }
+        }
     ];
+
+    const handleToolSelect = (toolId, categoryId) => {
+        onSelectTool(toolId);
+        setOpenCategory(null);
+    };
 
     return (
         <div className="drawing-toolbar">
-            {tools.map(tool => (
-                <button
-                    key={tool.id}
-                    className={`drawing-tool-btn ${activeTool === tool.id ? 'active' : ''}`}
-                    onClick={() => onSelectTool(tool.id)}
-                    title={tool.label}
-                >
-                    <span className="tool-icon">{tool.icon}</span>
-                </button>
+            {categories.map((cat) => (
+                <div key={cat.id} className="toolbar-category-container">
+                    {cat.type === 'single' ? (
+                        <button
+                            className={`drawing-tool-btn ${activeTool === cat.tool.id ? 'active' : ''}`}
+                            onClick={() => onSelectTool(cat.tool.id)}
+                            title={cat.tool.label}
+                        >
+                            <span className="tool-icon">{cat.tool.icon}</span>
+                        </button>
+                    ) : (
+                        <>
+                            <button
+                                className={`drawing-tool-btn group-btn ${cat.tools.some(t => t.id === activeTool) ? 'active' : ''}`}
+                                onClick={() => setOpenCategory(openCategory === cat.id ? null : cat.id)}
+                                title={cat.label}
+                            >
+                                <span className="tool-icon">{cat.icon}</span>
+                                <span className="category-arrow">›</span>
+                            </button>
+
+                            {openCategory === cat.id && (
+                                <div className="tool-flyout">
+                                    <div className="flyout-header">{cat.label}</div>
+                                    <div className="flyout-grid">
+                                        {cat.tools.map(tool => (
+                                            <button
+                                                key={tool.id}
+                                                className={`flyout-tool-btn ${activeTool === tool.id ? 'active' : ''}`}
+                                                onClick={() => handleToolSelect(tool.id, cat.id)}
+                                                title={tool.label}
+                                            >
+                                                <span className="tool-icon">{tool.icon}</span>
+                                                <span className="tool-label">{tool.label}</span>
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+                            )}
+                        </>
+                    )}
+                </div>
             ))}
         </div>
     );
