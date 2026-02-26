@@ -371,6 +371,24 @@ const Chart = ({
                 curve: 3,
                 doubleCurve: 4,
                 arc: 3,
+                xabcd: 5,
+                cypher: 5,
+                abcd: 4,
+                threeDrives: 6,
+                shark: 5,
+                fiveO: 6,
+                elliottImpulse: 5,
+                elliottCorrection: 3,
+                elliottTriangle: 5,
+                elliottDoubleCombo: 3,
+                elliottTripleCombo: 5,
+                headAndShoulders: 7,
+                trianglePattern: 4,
+                wedgePattern: 4,
+                rectanglePattern: 4,
+                channelPattern: 3,
+                doubleTop: 5,
+                doubleBottom: 5,
                 longPosition: 2,
                 shortPosition: 2,
                 forecast: 2,
@@ -576,7 +594,153 @@ const Chart = ({
             line.setAttribute('stroke-width', d.lineWidth || 2);
             line.setAttribute('stroke-linecap', 'round');
 
-            if (d.type === 'trend' && x2 !== null && y2 !== null) {
+            if (['xabcd', 'cypher', 'abcd', 'threeDrives', 'shark', 'fiveO'].includes(d.type) && d.points.length >= 2) {
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+                const pts = d.points.map(p => {
+                    const px = ts.timeToCoordinate(p.time);
+                    const py = ps.priceToCoordinate(p.price);
+                    return (px !== null && py !== null) ? `${px},${py}` : '';
+                }).filter(s => s).join(' ');
+                poly.setAttribute('points', pts);
+                poly.setAttribute('stroke', d.color || '#2962ff');
+                poly.setAttribute('stroke-width', d.lineWidth || 2);
+                poly.setAttribute('fill', 'none');
+                poly.setAttribute('stroke-linejoin', 'round');
+                svg.appendChild(poly);
+
+                // Premium Shading for Harmonic Patterns
+                if (['xabcd', 'cypher', 'shark'].includes(d.type) && d.points.length >= 3) {
+                    const pX = d.points[0], pA = d.points[1], pB = d.points[2];
+                    const pxX = ts.timeToCoordinate(pX.time), pyX = ps.priceToCoordinate(pX.price);
+                    const pxA = ts.timeToCoordinate(pA.time), pyA = ps.priceToCoordinate(pA.price);
+                    const pxB = ts.timeToCoordinate(pB.time), pyB = ps.priceToCoordinate(pB.price);
+                    if (pxX !== null && pxA !== null && pxB !== null) {
+                        const shade1 = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                        shade1.setAttribute('points', `${pxX},${pyX} ${pxA},${pyA} ${pxB},${pyB}`);
+                        shade1.setAttribute('fill', d.fillColor || 'rgba(41, 98, 255, 0.1)');
+                        svg.insertBefore(shade1, poly);
+                    }
+                    if (d.points.length >= 5) {
+                        const pC = d.points[3], pD = d.points[4];
+                        const pxB = ts.timeToCoordinate(pB.time), pyB = ps.priceToCoordinate(pB.price);
+                        const pxC = ts.timeToCoordinate(pC.time), pyC = ps.priceToCoordinate(pC.price);
+                        const pxD = ts.timeToCoordinate(pD.time), pyD = ps.priceToCoordinate(pD.price);
+                        if (pxB !== null && pxC !== null && pxD !== null) {
+                            const shade2 = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+                            shade2.setAttribute('points', `${pxB},${pyB} ${pxC},${pyC} ${pxD},${pyD}`);
+                            shade2.setAttribute('fill', d.fillColor || 'rgba(41, 98, 255, 0.1)');
+                            svg.insertBefore(shade2, poly);
+                        }
+                    }
+                }
+
+                const labels = d.type === 'abcd' ? ['A', 'B', 'C', 'D'] :
+                    d.type === 'threeDrives' ? ['1', '2', '3', '4', '5', '6'] :
+                        d.type === 'fiveO' ? ['0', '1', '2', '3', '4', '5'] :
+                            ['X', 'A', 'B', 'C', 'D'];
+
+                d.points.forEach((p, idx) => {
+                    const px = ts.timeToCoordinate(p.time);
+                    const py = ps.priceToCoordinate(p.price);
+                    if (px !== null && py !== null) {
+                        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        t.textContent = labels[idx] || '';
+                        t.setAttribute('x', px);
+                        t.setAttribute('y', py - 10);
+                        t.setAttribute('fill', '#d1d4dc');
+                        t.setAttribute('font-size', '12px');
+                        t.setAttribute('font-weight', 'bold');
+                        t.setAttribute('text-anchor', 'middle');
+                        svg.appendChild(t);
+                    }
+                });
+            } else if (['elliottImpulse', 'elliottCorrection', 'elliottTriangle', 'elliottDoubleCombo', 'elliottTripleCombo'].includes(d.type) && d.points.length >= 2) {
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+                const pts = d.points.map(p => {
+                    const px = ts.timeToCoordinate(p.time);
+                    const py = ps.priceToCoordinate(p.price);
+                    return (px !== null && py !== null) ? `${px},${py}` : '';
+                }).filter(s => s).join(' ');
+                poly.setAttribute('points', pts);
+                poly.setAttribute('stroke', d.color || '#2962ff');
+                poly.setAttribute('stroke-width', d.lineWidth || 2);
+                poly.setAttribute('fill', 'none');
+                poly.setAttribute('stroke-linejoin', 'round');
+                svg.appendChild(poly);
+
+                const labels = d.type === 'elliottImpulse' ? ['(1)', '(2)', '(3)', '(4)', '(5)'] :
+                    d.type === 'elliottCorrection' ? ['(A)', '(B)', '(C)'] :
+                        d.type === 'elliottTriangle' ? ['(A)', '(B)', '(C)', '(D)', '(E)'] :
+                            d.type === 'elliottDoubleCombo' ? ['(W)', '(X)', '(Y)'] :
+                                ['(W)', '(X)', '(Y)', '(X)', '(Z)'];
+
+                d.points.forEach((p, idx) => {
+                    const px = ts.timeToCoordinate(p.time);
+                    const py = ps.priceToCoordinate(p.price);
+                    if (px !== null && py !== null) {
+                        const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                        t.textContent = labels[idx] || '';
+                        t.setAttribute('x', px);
+                        t.setAttribute('y', py - 12);
+                        t.setAttribute('fill', '#d1d4dc');
+                        t.setAttribute('font-size', '12px');
+                        t.setAttribute('font-weight', 'bold');
+                        t.setAttribute('text-anchor', 'middle');
+                        svg.appendChild(t);
+                    }
+                });
+            } else if (['headAndShoulders', 'trianglePattern', 'wedgePattern', 'rectanglePattern', 'channelPattern', 'doubleTop', 'doubleBottom'].includes(d.type) && d.points.length >= 2) {
+                const isPolygon = ['trianglePattern', 'rectanglePattern'].includes(d.type);
+                const poly = document.createElementNS('http://www.w3.org/2000/svg', isPolygon ? 'polygon' : 'polyline');
+                const pts = d.points.map(p => {
+                    const px = ts.timeToCoordinate(p.time);
+                    const py = ps.priceToCoordinate(p.price);
+                    return (px !== null && py !== null) ? `${px},${py}` : '';
+                }).filter(s => s).join(' ');
+                poly.setAttribute('points', pts);
+                poly.setAttribute('stroke', d.color || '#2962ff');
+                poly.setAttribute('stroke-width', d.lineWidth || 2);
+                poly.setAttribute('fill', isPolygon ? (d.fillColor || 'rgba(41, 98, 255, 0.1)') : 'none');
+                poly.setAttribute('stroke-linejoin', 'round');
+                svg.appendChild(poly);
+
+                if (d.type === 'headAndShoulders') {
+                    const labels = ['S1', 'LS', 'N1', 'H', 'N2', 'RS', 'E1'];
+                    d.points.forEach((p, idx) => {
+                        const px = ts.timeToCoordinate(p.time);
+                        const py = ps.priceToCoordinate(p.price);
+                        if (px !== null && py !== null && labels[idx]) {
+                            const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                            t.textContent = labels[idx];
+                            t.setAttribute('x', px);
+                            t.setAttribute('y', py - 12);
+                            t.setAttribute('fill', '#d1d4dc');
+                            t.setAttribute('font-size', '10px');
+                            t.setAttribute('font-weight', 'bold');
+                            t.setAttribute('text-anchor', 'middle');
+                            svg.appendChild(t);
+                        }
+                    });
+                }
+                if (['doubleTop', 'doubleBottom'].includes(d.type)) {
+                    const labels = d.type === 'doubleTop' ? ['S', 'T1', 'N', 'T2', 'E'] : ['S', 'B1', 'N', 'B2', 'E'];
+                    d.points.forEach((p, idx) => {
+                        const px = ts.timeToCoordinate(p.time);
+                        const py = ps.priceToCoordinate(p.price);
+                        if (px !== null && py !== null && labels[idx]) {
+                            const t = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+                            t.textContent = labels[idx];
+                            t.setAttribute('x', px);
+                            t.setAttribute('y', py - 12);
+                            t.setAttribute('fill', '#d1d4dc');
+                            t.setAttribute('font-size', '10px');
+                            t.setAttribute('font-weight', 'bold');
+                            t.setAttribute('text-anchor', 'middle');
+                            svg.appendChild(t);
+                        }
+                    });
+                }
+            } else if (d.type === 'trend' && x2 !== null && y2 !== null) {
                 line.setAttribute('x1', x1);
                 line.setAttribute('y1', y1);
                 line.setAttribute('x2', x2);

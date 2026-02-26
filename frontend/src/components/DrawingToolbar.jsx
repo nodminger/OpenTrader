@@ -71,6 +71,32 @@ const DrawingToolbar = ({ activeTool, onSelectTool }) => {
             ]
         },
         {
+            id: 'patterns_cat',
+            type: 'group',
+            label: 'Patterns',
+            icon: '📉',
+            tools: [
+                { id: 'xabcd', icon: '🗠', label: 'XABCD Pattern' },
+                { id: 'cypher', icon: '⬡', label: 'Cypher Pattern' },
+                { id: 'abcd', icon: '⩉', label: 'ABCD Pattern' },
+                { id: 'threeDrives', icon: '🌊', label: 'Three Drives Pattern' },
+                { id: 'shark', icon: '🦈', label: 'Shark Pattern' },
+                { id: 'fiveO', icon: '⚄', label: '5-0 Pattern' },
+                { id: 'elliottImpulse', icon: '①', label: 'Elliott Impulse Wave' },
+                { id: 'elliottCorrection', icon: 'Ⓐ', label: 'Elliott Correction' },
+                { id: 'elliottTriangle', icon: '⊿', label: 'Elliott Triangle' },
+                { id: 'elliottDoubleCombo', icon: 'Ⓦ', label: 'Elliott Double Combo' },
+                { id: 'elliottTripleCombo', icon: 'ⓩ', label: 'Elliott Triple Combo' },
+                { id: 'headAndShoulders', icon: '👤', label: 'Head & Shoulders' },
+                { id: 'trianglePattern', icon: '▽', label: 'Triangle Pattern' },
+                { id: 'wedgePattern', icon: '◹', label: 'Wedge Pattern' },
+                { id: 'rectanglePattern', icon: '▭', label: 'Rectangle Pattern' },
+                { id: 'channelPattern', icon: '⫖', label: 'Channel Pattern' },
+                { id: 'doubleTop', icon: '⩰', label: 'Double Top' },
+                { id: 'doubleBottom', icon: '⩯', label: 'Double Bottom' },
+            ]
+        },
+        {
             id: 'fib_cat',
             type: 'group',
             label: 'Gann & Fibonacci',
