@@ -9,8 +9,18 @@ import DrawingToolbar from './components/DrawingToolbar';
 import { SMA_COLORS } from './Indicators/sma';
 
 const STORAGE_KEY = 'opentrader_settings';
+const FIRST_VISIT_KEY = 'opentrader_first_visit';
 
 function App() {
+  // Check if first time visitor
+  const [showWelcome, setShowWelcome] = useState(() => {
+    const visited = localStorage.getItem(FIRST_VISIT_KEY);
+    if (!visited) {
+      localStorage.setItem(FIRST_VISIT_KEY, 'false');
+      return true;
+    }
+    return false;
+  });
   // Load initial settings from localStorage
   const getSavedSettings = () => {
     try {
@@ -408,6 +418,58 @@ function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', width: '100vw', overflow: 'hidden' }}>
+      {showWelcome && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0, 0, 0, 0.7)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 9999,
+        }}>
+          <div style={{
+            backgroundColor: '#1a1a2e',
+            color: '#fff',
+            padding: '32px',
+            borderRadius: '12px',
+            maxWidth: '500px',
+            textAlign: 'center',
+            boxShadow: '0 4px 20px rgba(0, 0, 0, 0.5)',
+            border: '1px solid #333',
+          }}>
+            <h2 style={{ margin: '0 0 16px 0', fontSize: '24px', color: '#4fc3f7' }}>Welcome to Open Trader!</h2>
+            <p style={{ margin: '0 0 12px 0', lineHeight: '1.6', fontSize: '14px' }}>
+              Open Trader is an open-source tool for viewing stock and crypto market data, as well as using indicators and drawing tools to perform analysis.
+            </p>
+            <p style={{ margin: '0 0 16px 0', lineHeight: '1.6', fontSize: '14px' }}>
+              The project is still in its early stages, so you may encounter bugs. If you do, please raise an issue on GitHub. Thanks, and have a blast trading!
+            </p>
+            <p style={{ margin: '0 0 24px 0', fontSize: '14px', color: '#ff6b6b' }}>Made with ❤️ from India</p>
+            <button
+              onClick={() => setShowWelcome(false)}
+              style={{
+                backgroundColor: '#4fc3f7',
+                color: '#000',
+                border: 'none',
+                padding: '12px 32px',
+                borderRadius: '6px',
+                fontSize: '16px',
+                fontWeight: 'bold',
+                cursor: 'pointer',
+                transition: 'background-color 0.2s',
+              }}
+              onMouseOver={(e) => e.target.style.backgroundColor = '#29b6f6'}
+              onMouseOut={(e) => e.target.style.backgroundColor = '#4fc3f7'}
+            >
+              Let's Go!
+            </button>
+          </div>
+        </div>
+      )}
       <TopBar
         symbol={symbol} setSymbol={setSymbol}
         interval={interval} setInterval={setTimeInterval}
