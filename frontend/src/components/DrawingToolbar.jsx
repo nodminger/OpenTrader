@@ -58,6 +58,17 @@ const DrawingToolbar = ({ activeTool, onSelectTool }) => {
             icon: '≡',
             tools: [
                 { id: 'fibRetracement', icon: '≡', label: 'Fib Retracement' },
+                { id: 'fibExtension', icon: '↗', label: 'Trend-Based Fib Extension' },
+                { id: 'fibSpeedArcs', icon: '➰', label: 'Fib Speed Resistance Arcs' },
+                { id: 'fibFan', icon: '∠', label: 'Fib Fan' },
+                { id: 'fibTimeZone', icon: '◴', label: 'Fib Time Zone' },
+                { id: 'fibChannel', icon: '⧬', label: 'Fib Channel' },
+                { id: 'fibWedge', icon: '◹', label: 'Fib Wedge' },
+                { id: 'fibSpiral', icon: '🌀', label: 'Fib Spiral' },
+                { id: 'fibCircles', icon: '◎', label: 'Fib Circles' },
+                { id: 'gannFan', icon: '📐', label: 'Gann Fan' },
+                { id: 'gannSquare', icon: '⊞', label: 'Gann Square' },
+                { id: 'gannBox', icon: '⊠', label: 'Gann Box' },
             ]
         },
         {

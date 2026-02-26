@@ -365,6 +365,17 @@ const Chart = ({
                 rectangle: 2,
                 circle: 2,
                 fibRetracement: 2,
+                fibExtension: 3,
+                fibSpeedArcs: 2,
+                fibFan: 2,
+                fibTimeZone: 2,
+                fibChannel: 3,
+                fibWedge: 3,
+                fibSpiral: 2,
+                fibCircles: 2,
+                gannFan: 2,
+                gannSquare: 2,
+                gannBox: 2,
                 parallelChannel: 3,
                 flatTopBottom: 3,
                 disjointChannel: 4,
@@ -750,6 +761,208 @@ const Chart = ({
                 line.setAttribute('stroke-dasharray', '4,4');
                 line.setAttribute('opacity', '0.5');
                 svg.appendChild(line);
+            } else if (d.type === 'fibExtension' && d.points.length >= 2) {
+                const p1 = d.points[0];
+                const p2 = d.points[1];
+                const p3 = d.points[2] || d.points[1];
+
+                const px1 = ts.timeToCoordinate(p1.time);
+                const py1 = ps.priceToCoordinate(p1.price);
+                const px2 = ts.timeToCoordinate(p2.time);
+                const py2 = ps.priceToCoordinate(p2.price);
+                const px3 = ts.timeToCoordinate(p3.time);
+                const py3 = ps.priceToCoordinate(p3.price);
+
+                if (px1 !== null && py1 !== null && px2 !== null && py2 !== null && px3 !== null && py3 !== null) {
+                    const priceDiff = p2.price - p1.price;
+                    const levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618, 2.618];
+
+                    levels.forEach(lvl => {
+                        const price = p3.price + priceDiff * lvl;
+                        const cosY = ps.priceToCoordinate(price);
+                        if (cosY !== null) {
+                            const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                            l.setAttribute('x1', px3);
+                            l.setAttribute('y1', cosY);
+                            l.setAttribute('x2', width);
+                            l.setAttribute('y2', cosY);
+                            l.setAttribute('stroke', d.color || '#2962ff');
+                            l.setAttribute('stroke-width', 1);
+                            l.setAttribute('opacity', '0.6');
+                            svg.appendChild(l);
+                        }
+                    });
+                }
+            } else if (d.type === 'fibFan' && x2 !== null && y2 !== null) {
+                const levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+                levels.forEach(lvl => {
+                    const yOffset = (y2 - y1) * lvl;
+                    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    l.setAttribute('x1', x1);
+                    l.setAttribute('y1', y1);
+                    l.setAttribute('x2', x2);
+                    l.setAttribute('y2', y1 + yOffset);
+                    l.setAttribute('stroke', d.color || '#2962ff');
+                    l.setAttribute('stroke-width', 1);
+                    l.setAttribute('opacity', '0.5');
+                    svg.appendChild(l);
+                });
+            } else if (d.type === 'fibTimeZone' && x2 !== null && y2 !== null) {
+                const fib = [1, 2, 3, 5, 8, 13, 21, 34, 55, 89];
+                const dx = Math.abs(x2 - x1);
+                fib.forEach(f => {
+                    const lx = x1 + f * dx;
+                    if (lx < width) {
+                        const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                        l.setAttribute('x1', lx);
+                        l.setAttribute('y1', 0);
+                        l.setAttribute('x2', lx);
+                        l.setAttribute('y2', height);
+                        l.setAttribute('stroke', d.color || '#2962ff');
+                        l.setAttribute('opacity', '0.4');
+                        svg.appendChild(l);
+                    }
+                });
+            } else if (d.type === 'gannFan' && x2 !== null && y2 !== null) {
+                const angles = [1 / 8, 1 / 4, 1 / 3, 1 / 2, 1, 2, 3, 4, 8];
+                angles.forEach(angle => {
+                    const dx = x2 - x1;
+                    const dy = y2 - y1;
+                    const l = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                    l.setAttribute('x1', x1);
+                    l.setAttribute('y1', y1);
+                    l.setAttribute('x2', x1 + 10000);
+                    l.setAttribute('y2', y1 + (dy / dx) * angle * 10000);
+                    l.setAttribute('stroke', d.color || '#2962ff');
+                    l.setAttribute('stroke-width', 1);
+                    l.setAttribute('opacity', '0.3');
+                    svg.appendChild(l);
+                });
+            } else if (d.type === 'fibCircles' && x2 !== null && y2 !== null) {
+                const levels = [0.236, 0.382, 0.5, 0.618, 0.786, 1, 1.618];
+                const radius = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                levels.forEach(lvl => {
+                    const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+                    circle.setAttribute('cx', x1);
+                    circle.setAttribute('cy', y1);
+                    circle.setAttribute('r', radius * lvl);
+                    circle.setAttribute('stroke', d.color || '#2962ff');
+                    circle.setAttribute('fill', 'none');
+                    circle.setAttribute('opacity', '0.3');
+                    svg.appendChild(circle);
+                });
+            } else if (d.type === 'fibSpeedArcs' && x2 !== null && y2 !== null) {
+                const levels = [0.236, 0.382, 0.5, 0.618, 0.786, 1];
+                const radius = Math.abs(x2 - x1);
+                levels.forEach(lvl => {
+                    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    const r = radius * lvl;
+                    // Arc from 0 to -90 degrees roughly
+                    path.setAttribute('d', `M ${x1} ${y1 - r} A ${r} ${r} 0 0 1 ${x1 + r} ${y1}`);
+                    path.setAttribute('stroke', d.color || '#2962ff');
+                    path.setAttribute('fill', 'none');
+                    path.setAttribute('opacity', '0.4');
+                    svg.appendChild(path);
+                });
+            } else if (d.type === 'gannSquare' && x2 !== null && y2 !== null) {
+                const dx = x2 - x1;
+                const dy = y2 - y1;
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', Math.min(x1, x2));
+                rect.setAttribute('y', Math.min(y1, y2));
+                rect.setAttribute('width', Math.abs(dx));
+                rect.setAttribute('height', Math.abs(dy));
+                rect.setAttribute('stroke', d.color || '#2962ff');
+                rect.setAttribute('fill', 'none');
+                svg.appendChild(rect);
+
+                // Diagonals
+                const l1 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                l1.setAttribute('x1', x1); l1.setAttribute('y1', y1); l1.setAttribute('x2', x2); l1.setAttribute('y2', y2);
+                l1.setAttribute('stroke', d.color); l1.setAttribute('opacity', '0.3');
+                svg.appendChild(l1);
+                const l2 = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+                l2.setAttribute('x1', x1); l2.setAttribute('y1', y2); l2.setAttribute('x2', x2); l2.setAttribute('y2', y1);
+                l2.setAttribute('stroke', d.color); l2.setAttribute('opacity', '0.3');
+                svg.appendChild(l2);
+            } else if (d.type === 'gannBox' && x2 !== null && y2 !== null) {
+                const rect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+                rect.setAttribute('x', Math.min(x1, x2));
+                rect.setAttribute('y', Math.min(y1, y2));
+                rect.setAttribute('width', Math.abs(x2 - x1));
+                rect.setAttribute('height', Math.abs(y2 - y1));
+                rect.setAttribute('stroke', d.color || '#2962ff');
+                rect.setAttribute('fill', 'none');
+                svg.appendChild(rect);
+
+                const levels = [0.25, 0.382, 0.5, 0.618, 0.75];
+                levels.forEach(lvl => {
+                    const h = line.cloneNode();
+                    const hy = Math.min(y1, y2) + Math.abs(y2 - y1) * lvl;
+                    h.setAttribute('x1', Math.min(x1, x2)); h.setAttribute('x2', Math.max(x1, x2));
+                    h.setAttribute('y1', hy); h.setAttribute('y2', hy);
+                    h.setAttribute('opacity', '0.2');
+                    svg.appendChild(h);
+
+                    const v = line.cloneNode();
+                    const vx = Math.min(x1, x2) + Math.abs(x2 - x1) * lvl;
+                    v.setAttribute('x1', vx); v.setAttribute('x2', vx);
+                    v.setAttribute('y1', Math.min(y1, y2)); v.setAttribute('y2', Math.max(y1, y2));
+                    v.setAttribute('opacity', '0.2');
+                    svg.appendChild(v);
+                });
+            } else if (d.type === 'fibChannel' && d.points.length >= 2) {
+                const p1 = d.points[0], p2 = d.points[1], p3 = d.points[2] || p1;
+                const px1 = ts.timeToCoordinate(p1.time), py1 = ps.priceToCoordinate(p1.price);
+                const px2 = ts.timeToCoordinate(p2.time), py2 = ps.priceToCoordinate(p2.price);
+                const px3 = ts.timeToCoordinate(p3.time), py3 = ps.priceToCoordinate(p3.price);
+
+                if (px1 !== null && py1 !== null && px2 !== null && py2 !== null) {
+                    const slope = (py2 - py1) / (px2 - px1);
+                    const levels = [0, 0.236, 0.382, 0.5, 0.618, 0.786, 1];
+                    const offsetBase = py3 !== null ? py3 - (py1 + (px3 - px1) * slope) : 0;
+
+                    levels.forEach(lvl => {
+                        const l = line.cloneNode();
+                        const currOffset = offsetBase * lvl;
+                        l.setAttribute('x1', 0); l.setAttribute('x2', width);
+                        l.setAttribute('y1', py1 + currOffset - px1 * slope);
+                        l.setAttribute('y2', py1 + currOffset + (width - px1) * slope);
+                        l.setAttribute('opacity', lvl === 0 || lvl === 1 ? '0.6' : '0.3');
+                        svg.appendChild(l);
+                    });
+                }
+            } else if (d.type === 'fibWedge' && d.points.length >= 2) {
+                const p1 = d.points[0], p2 = d.points[1], p3 = d.points[2] || p1;
+                const px1 = ts.timeToCoordinate(p1.time), py1 = ps.priceToCoordinate(p1.price);
+                const px2 = ts.timeToCoordinate(p2.time), py2 = ps.priceToCoordinate(p2.price);
+                const px3 = ts.timeToCoordinate(p3.time), py3 = ps.priceToCoordinate(p3.price);
+
+                if (px1 !== null && py1 !== null && px2 !== null && py2 !== null && px3 !== null && py3 !== null) {
+                    const levels = [0.382, 0.5, 0.618, 0.786, 1];
+                    levels.forEach(lvl => {
+                        const arc = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                        const r1 = Math.sqrt(Math.pow(px2 - px1, 2) + Math.pow(py2 - py1, 2)) * lvl;
+                        const r2 = Math.sqrt(Math.pow(px3 - px1, 2) + Math.pow(py3 - py1, 2)) * lvl;
+                        // Simplified wedge arc
+                        arc.setAttribute('d', `M ${px1} ${py1 - r1} L ${px1 + r2} ${py1}`);
+                        arc.setAttribute('stroke', d.color); arc.setAttribute('fill', 'none'); arc.setAttribute('opacity', '0.3');
+                        svg.appendChild(arc);
+                    });
+                }
+            } else if (d.type === 'fibSpiral' && x2 !== null && y2 !== null) {
+                const radius = Math.sqrt(Math.pow(x2 - x1, 2) + Math.pow(y2 - y1, 2));
+                let pathStr = `M ${x1} ${y1}`;
+                for (let a = 0; a < Math.PI * 4; a += 0.1) {
+                    const r = (radius / (Math.PI * 4)) * a;
+                    const sx = x1 + Math.cos(a) * r;
+                    const sy = y1 + Math.sin(a) * r;
+                    pathStr += ` L ${sx} ${sy}`;
+                }
+                const spiral = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                spiral.setAttribute('d', pathStr);
+                spiral.setAttribute('stroke', d.color); spiral.setAttribute('fill', 'none'); spiral.setAttribute('opacity', '0.5');
+                svg.appendChild(spiral);
             } else if (d.type === 'parallelChannel' && d.points.length >= 2) {
                 const p1 = d.points[0];
                 const p2 = d.points[1];
